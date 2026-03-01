@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import {
   Upload, ArrowUp, ArrowDown, Trash2, Save, Monitor,
-  Image as ImageIcon, Plus, Check, List,
+  Image as ImageIcon, Plus, Check, List, Film,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -31,7 +31,28 @@ type Slide = {
   sort_order: number;
   object_fit: string;
   playlist_id: string;
+  media_type: string;
 };
+
+const VIDEO_EXTENSIONS = ["mp4", "webm", "ogg", "mov"];
+
+function isVideoFile(filename: string): boolean {
+  const ext = filename.split(".").pop()?.toLowerCase() || "";
+  return VIDEO_EXTENSIONS.includes(ext);
+}
+
+function getVideoDuration(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const video = document.createElement("video");
+    video.preload = "metadata";
+    video.onloadedmetadata = () => {
+      window.URL.revokeObjectURL(video.src);
+      resolve(Math.ceil(video.duration));
+    };
+    video.onerror = () => resolve(5);
+    video.src = URL.createObjectURL(file);
+  });
+}
 
 const AdminPanel = () => {
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
@@ -96,7 +117,6 @@ const AdminPanel = () => {
   };
 
   const setActivePlaylist = async (id: string) => {
-    // Deactivate all, then activate selected
     await supabase.from("playlists").update({ is_active: false }).neq("id", "");
     const { error } = await supabase.from("playlists").update({ is_active: true }).eq("id", id);
     if (error) {
@@ -116,8 +136,9 @@ const AdminPanel = () => {
 
     try {
       for (const file of Array.from(files)) {
-        const ext = file.name.split(".").pop();
+        const ext = file.name.split(".").pop()?.toLowerCase() || "";
         const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const mediaType = isVideoFile(file.name) ? "video" : "image";
 
         const { error: uploadError } = await supabase.storage
           .from("images")
@@ -132,14 +153,21 @@ const AdminPanel = () => {
           .from("images")
           .getPublicUrl(fileName);
 
+        // For videos, try to get the actual duration
+        let duration = 5;
+        if (mediaType === "video") {
+          duration = await getVideoDuration(file);
+        }
+
         const { data, error } = await supabase
           .from("slides")
           .insert({
             image_url: urlData.publicUrl,
-            duration: 5,
+            duration,
             sort_order: slides.length + 1,
             object_fit: globalObjectFit,
             playlist_id: selectedPlaylistId,
+            media_type: mediaType,
           })
           .select()
           .single();
@@ -150,7 +178,7 @@ const AdminPanel = () => {
           setSlides((prev) => [...prev, data]);
         }
       }
-      toast.success("Images uploaded!");
+      toast.success("Media uploaded!");
     } finally {
       setUploading(false);
       e.target.value = "";
@@ -237,7 +265,6 @@ const AdminPanel = () => {
             )}
           </div>
 
-          {/* Create new playlist */}
           <div className="flex gap-2">
             <Input
               placeholder="New playlist name…"
@@ -251,7 +278,6 @@ const AdminPanel = () => {
             </Button>
           </div>
 
-          {/* Select playlist */}
           {playlists.length > 0 && (
             <div className="flex gap-2 items-center">
               <Select value={selectedPlaylistId} onValueChange={setSelectedPlaylistId}>
@@ -284,11 +310,12 @@ const AdminPanel = () => {
         <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-primary/30 rounded-xl bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors">
           <Upload className="w-8 h-8 text-primary" />
           <span className="text-sm font-medium text-primary">
-            {uploading ? "Uploading..." : "Tap to upload images"}
+            {uploading ? "Uploading..." : "Tap to upload images or videos"}
           </span>
+          <span className="text-[10px] text-muted-foreground">JPG, PNG, MP4, WEBM</span>
           <input
             type="file"
-            accept="image/*"
+            accept="image/*,video/mp4,video/webm,video/ogg"
             multiple
             onChange={handleUpload}
             disabled={uploading || !selectedPlaylistId}
@@ -300,7 +327,7 @@ const AdminPanel = () => {
         <div className="flex items-center justify-between bg-card rounded-xl p-4 border border-border">
           <div className="flex items-center gap-2">
             <ImageIcon className="w-4 h-4 text-muted-foreground" />
-            <Label className="text-sm font-medium">Image Scaling</Label>
+            <Label className="text-sm font-medium">Media Scaling</Label>
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Fit</span>
@@ -318,7 +345,7 @@ const AdminPanel = () => {
         {slides.length === 0 ? (
           <div className="text-center py-16 text-muted-foreground">
             <ImageIcon className="w-12 h-12 mx-auto mb-3 opacity-40" />
-            <p className="text-sm">No slides yet. Upload images to get started.</p>
+            <p className="text-sm">No slides yet. Upload media to get started.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -328,14 +355,29 @@ const AdminPanel = () => {
                 className="bg-card rounded-xl border border-border overflow-hidden shadow-sm"
               >
                 <div className="aspect-video bg-muted relative">
-                  <img
-                    src={slide.image_url}
-                    alt={`Slide ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
+                  {slide.media_type === "video" ? (
+                    <video
+                      src={slide.image_url}
+                      className="w-full h-full object-cover"
+                      muted
+                      playsInline
+                      preload="metadata"
+                    />
+                  ) : (
+                    <img
+                      src={slide.image_url}
+                      alt={`Slide ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                   <span className="absolute top-1.5 left-1.5 bg-foreground/70 text-background text-[10px] font-bold px-1.5 py-0.5 rounded-md">
                     #{index + 1}
                   </span>
+                  {slide.media_type === "video" && (
+                    <span className="absolute top-1.5 right-1.5 bg-primary/80 text-primary-foreground text-[10px] font-bold px-1.5 py-0.5 rounded-md flex items-center gap-0.5">
+                      <Film className="w-3 h-3" /> VID
+                    </span>
+                  )}
                 </div>
                 <div className="p-2.5 space-y-2">
                   <div className="flex items-center gap-1.5">
