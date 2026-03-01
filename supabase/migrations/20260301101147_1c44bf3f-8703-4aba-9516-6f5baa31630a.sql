@@ -1,0 +1,1 @@
+ALTER TABLE public.slides ADD COLUMN media_type text NOT NULL DEFAULT 'image';

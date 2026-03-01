@@ -41,6 +41,7 @@ export type Database = {
           duration: number
           id: string
           image_url: string
+          media_type: string
           object_fit: string
           playlist_id: string
           sort_order: number
@@ -50,6 +51,7 @@ export type Database = {
           duration?: number
           id?: string
           image_url: string
+          media_type?: string
           object_fit?: string
           playlist_id: string
           sort_order?: number
@@ -59,6 +61,7 @@ export type Database = {
           duration?: number
           id?: string
           image_url?: string
+          media_type?: string
           object_fit?: string
           playlist_id?: string
           sort_order?: number
