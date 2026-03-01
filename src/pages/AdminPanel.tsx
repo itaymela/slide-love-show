@@ -117,8 +117,7 @@ const AdminPanel = () => {
   };
 
   const setActivePlaylist = async (id: string) => {
-    await supabase.from("playlists").update({ is_active: false }).neq("id", "");
-    const { error } = await supabase.from("playlists").update({ is_active: true }).eq("id", id);
+    const { error } = await supabase.rpc("set_active_playlist", { playlist_id: id });
     if (error) {
       toast.error("Failed to set active playlist");
       return;
