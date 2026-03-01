@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      playlists: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
       slides: {
         Row: {
           created_at: string
@@ -21,6 +42,7 @@ export type Database = {
           id: string
           image_url: string
           object_fit: string
+          playlist_id: string
           sort_order: number
         }
         Insert: {
@@ -29,6 +51,7 @@ export type Database = {
           id?: string
           image_url: string
           object_fit?: string
+          playlist_id: string
           sort_order?: number
         }
         Update: {
@@ -37,9 +60,18 @@ export type Database = {
           id?: string
           image_url?: string
           object_fit?: string
+          playlist_id?: string
           sort_order?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "slides_playlist_id_fkey"
+            columns: ["playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
