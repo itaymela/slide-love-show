@@ -1,0 +1,1 @@
+ALTER FUNCTION public.set_active_playlist(uuid) SET search_path = public;
