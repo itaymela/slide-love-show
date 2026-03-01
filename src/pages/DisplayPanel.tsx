@@ -7,6 +7,7 @@ type Slide = {
   duration: number;
   sort_order: number;
   object_fit: string;
+  playlist_id: string;
 };
 
 const DisplayPanel = () => {
@@ -20,41 +21,66 @@ const DisplayPanel = () => {
   const preloadRef = useRef<HTMLImageElement | null>(null);
   const slidesRef = useRef<Slide[]>([]);
   const currentIndexRef = useRef(0);
+  const activePlaylistIdRef = useRef<string | null>(null);
 
-  const fetchSlides = useCallback(async () => {
+  const fetchActiveSlides = useCallback(async () => {
+    // Get active playlist
+    const { data: playlists } = await supabase
+      .from("playlists")
+      .select("id")
+      .eq("is_active", true)
+      .limit(1);
+
+    const activeId = playlists?.[0]?.id;
+    activePlaylistIdRef.current = activeId || null;
+
+    if (!activeId) {
+      slidesRef.current = [];
+      setSlides([]);
+      return;
+    }
+
     const { data } = await supabase
       .from("slides")
       .select("*")
+      .eq("playlist_id", activeId)
       .order("sort_order", { ascending: true });
+
     if (data && data.length > 0) {
       slidesRef.current = data;
       setSlides(data);
       setObjectFit(data[0].object_fit as "contain" | "cover");
+    } else {
+      slidesRef.current = [];
+      setSlides([]);
     }
   }, []);
 
   // Initial fetch
   useEffect(() => {
-    fetchSlides();
-  }, [fetchSlides]);
+    fetchActiveSlides();
+  }, [fetchActiveSlides]);
 
-  // Realtime subscription
+  // Realtime: listen for changes on both playlists and slides
   useEffect(() => {
     const channel = supabase
-      .channel("slides-realtime")
+      .channel("display-realtime")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "playlists" },
+        () => fetchActiveSlides()
+      )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "slides" },
-        () => {
-          fetchSlides();
-        }
+        () => fetchActiveSlides()
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchSlides]);
+  }, [fetchActiveSlides]);
 
   // Preload next image
   const preloadNext = useCallback((nextIdx: number) => {
@@ -99,11 +125,7 @@ const DisplayPanel = () => {
 
       currentIndexRef.current = next;
       setCurrentIndex(next);
-
-      // Preload the one after next
       preloadNext((next + 1) % s.length);
-
-      // Schedule next advance
       timerRef.current = setTimeout(advance, s[next].duration * 1000);
     };
 
@@ -125,14 +147,12 @@ const DisplayPanel = () => {
       style={{ backgroundColor: "hsl(0 0% 0%)", cursor: "none" }}
     >
       <div className="relative w-full h-full">
-        {/* Layer A */}
         <img
           src={imageA}
           alt=""
           className={`absolute inset-0 w-full h-full ${fitClass} transition-opacity duration-1000 ease-in-out`}
           style={{ opacity: showA ? 1 : 0 }}
         />
-        {/* Layer B */}
         <img
           src={imageB}
           alt=""

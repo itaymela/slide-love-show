@@ -3,9 +3,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Upload, ArrowUp, ArrowDown, Trash2, Save, Monitor, Image as ImageIcon } from "lucide-react";
+import {
+  Upload, ArrowUp, ArrowDown, Trash2, Save, Monitor,
+  Image as ImageIcon, Plus, Check, List,
+} from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type Playlist = {
+  id: string;
+  name: string;
+  is_active: boolean;
+  created_at: string;
+};
 
 type Slide = {
   id: string;
@@ -13,36 +30,88 @@ type Slide = {
   duration: number;
   sort_order: number;
   object_fit: string;
+  playlist_id: string;
 };
 
 const AdminPanel = () => {
+  const [playlists, setPlaylists] = useState<Playlist[]>([]);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string>("");
+  const [newPlaylistName, setNewPlaylistName] = useState("");
   const [slides, setSlides] = useState<Slide[]>([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [globalObjectFit, setGlobalObjectFit] = useState<"contain" | "cover">("contain");
 
+  const fetchPlaylists = useCallback(async () => {
+    const { data } = await supabase
+      .from("playlists")
+      .select("*")
+      .order("created_at", { ascending: true });
+    if (data) {
+      setPlaylists(data);
+      if (!selectedPlaylistId && data.length > 0) {
+        const active = data.find((p) => p.is_active);
+        setSelectedPlaylistId(active?.id || data[0].id);
+      }
+    }
+  }, [selectedPlaylistId]);
+
   const fetchSlides = useCallback(async () => {
-    const { data, error } = await supabase
+    if (!selectedPlaylistId) return;
+    const { data } = await supabase
       .from("slides")
       .select("*")
+      .eq("playlist_id", selectedPlaylistId)
       .order("sort_order", { ascending: true });
-    if (error) {
-      toast.error("Failed to load slides");
-      return;
-    }
     setSlides(data || []);
     if (data && data.length > 0) {
       setGlobalObjectFit(data[0].object_fit as "contain" | "cover");
     }
-  }, []);
+  }, [selectedPlaylistId]);
+
+  useEffect(() => {
+    fetchPlaylists();
+  }, [fetchPlaylists]);
 
   useEffect(() => {
     fetchSlides();
   }, [fetchSlides]);
 
+  const createPlaylist = async () => {
+    const name = newPlaylistName.trim();
+    if (!name) return;
+    const { data, error } = await supabase
+      .from("playlists")
+      .insert({ name })
+      .select()
+      .single();
+    if (error) {
+      toast.error("Failed to create playlist");
+      return;
+    }
+    setPlaylists((prev) => [...prev, data]);
+    setSelectedPlaylistId(data.id);
+    setNewPlaylistName("");
+    toast.success(`Playlist "${name}" created`);
+  };
+
+  const setActivePlaylist = async (id: string) => {
+    // Deactivate all, then activate selected
+    await supabase.from("playlists").update({ is_active: false }).neq("id", "");
+    const { error } = await supabase.from("playlists").update({ is_active: true }).eq("id", id);
+    if (error) {
+      toast.error("Failed to set active playlist");
+      return;
+    }
+    setPlaylists((prev) =>
+      prev.map((p) => ({ ...p, is_active: p.id === id }))
+    );
+    toast.success("Active playlist updated — display will refresh automatically");
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files || files.length === 0) return;
+    if (!files || files.length === 0 || !selectedPlaylistId) return;
     setUploading(true);
 
     try {
@@ -63,16 +132,15 @@ const AdminPanel = () => {
           .from("images")
           .getPublicUrl(fileName);
 
-        const newSlide: Omit<Slide, "id"> = {
-          image_url: urlData.publicUrl,
-          duration: 5,
-          sort_order: slides.length + 1,
-          object_fit: globalObjectFit,
-        };
-
         const { data, error } = await supabase
           .from("slides")
-          .insert(newSlide)
+          .insert({
+            image_url: urlData.publicUrl,
+            duration: 5,
+            sort_order: slides.length + 1,
+            object_fit: globalObjectFit,
+            playlist_id: selectedPlaylistId,
+          })
           .select()
           .single();
 
@@ -118,22 +186,13 @@ const AdminPanel = () => {
   const handleSync = async () => {
     setSaving(true);
     try {
-      const updates = slides.map((s, i) => ({
-        id: s.id,
-        image_url: s.image_url,
-        duration: s.duration,
-        sort_order: i,
-        object_fit: globalObjectFit,
-      }));
-
-      for (const u of updates) {
+      for (const [i, s] of slides.entries()) {
         const { error } = await supabase
           .from("slides")
-          .update({ duration: u.duration, sort_order: u.sort_order, object_fit: u.object_fit })
-          .eq("id", u.id);
+          .update({ duration: s.duration, sort_order: i, object_fit: globalObjectFit })
+          .eq("id", s.id);
         if (error) throw error;
       }
-
       toast.success("Slides synced to display!");
     } catch {
       toast.error("Sync failed");
@@ -141,6 +200,10 @@ const AdminPanel = () => {
       setSaving(false);
     }
   };
+
+  const activePlaylist = playlists.find((p) => p.is_active);
+  const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
+  const isSelectedActive = selectedPlaylist?.is_active;
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -162,6 +225,61 @@ const AdminPanel = () => {
       </header>
 
       <div className="px-4 py-4 space-y-4">
+        {/* Playlist Management */}
+        <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <List className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold">Playlists</span>
+            {activePlaylist && (
+              <span className="ml-auto text-[10px] font-bold uppercase tracking-wider bg-primary/15 text-primary px-2 py-0.5 rounded-full">
+                Live: {activePlaylist.name}
+              </span>
+            )}
+          </div>
+
+          {/* Create new playlist */}
+          <div className="flex gap-2">
+            <Input
+              placeholder="New playlist name…"
+              value={newPlaylistName}
+              onChange={(e) => setNewPlaylistName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && createPlaylist()}
+              className="h-9 text-sm"
+            />
+            <Button size="sm" className="h-9 gap-1 shrink-0" onClick={createPlaylist} disabled={!newPlaylistName.trim()}>
+              <Plus className="w-3.5 h-3.5" /> Add
+            </Button>
+          </div>
+
+          {/* Select playlist */}
+          {playlists.length > 0 && (
+            <div className="flex gap-2 items-center">
+              <Select value={selectedPlaylistId} onValueChange={setSelectedPlaylistId}>
+                <SelectTrigger className="h-9 text-sm flex-1">
+                  <SelectValue placeholder="Select playlist" />
+                </SelectTrigger>
+                <SelectContent>
+                  {playlists.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} {p.is_active ? "⚡" : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                size="sm"
+                className="h-9 gap-1 shrink-0"
+                variant={isSelectedActive ? "secondary" : "default"}
+                disabled={isSelectedActive}
+                onClick={() => setActivePlaylist(selectedPlaylistId)}
+              >
+                <Check className="w-3.5 h-3.5" />
+                {isSelectedActive ? "Active" : "Set Active"}
+              </Button>
+            </div>
+          )}
+        </div>
+
         {/* Upload area */}
         <label className="flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed border-primary/30 rounded-xl bg-primary/5 cursor-pointer hover:bg-primary/10 transition-colors">
           <Upload className="w-8 h-8 text-primary" />
@@ -173,7 +291,7 @@ const AdminPanel = () => {
             accept="image/*"
             multiple
             onChange={handleUpload}
-            disabled={uploading}
+            disabled={uploading || !selectedPlaylistId}
             className="hidden"
           />
         </label>
@@ -223,43 +341,44 @@ const AdminPanel = () => {
                   <div className="flex items-center gap-1.5">
                     <Input
                       type="number"
+                      inputMode="numeric"
                       min={1}
                       max={300}
                       value={slide.duration}
                       onChange={(e) =>
                         updateDuration(index, parseInt(e.target.value) || 5)
                       }
-                      className="h-8 text-xs text-center"
+                      className="h-10 text-base text-center font-semibold"
                     />
-                    <span className="text-[10px] text-muted-foreground whitespace-nowrap">sec</span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">sec</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-8 w-8"
                       onClick={() => moveSlide(index, "up")}
                       disabled={index === 0}
                     >
-                      <ArrowUp className="w-3.5 h-3.5" />
+                      <ArrowUp className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-8 w-8"
                       onClick={() => moveSlide(index, "down")}
                       disabled={index === slides.length - 1}
                     >
-                      <ArrowDown className="w-3.5 h-3.5" />
+                      <ArrowDown className="w-4 h-4" />
                     </Button>
                     <div className="flex-1" />
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-destructive hover:text-destructive"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
                       onClick={() => deleteSlide(index)}
                     >
-                      <Trash2 className="w-3.5 h-3.5" />
+                      <Trash2 className="w-4 h-4" />
                     </Button>
                   </div>
                 </div>
