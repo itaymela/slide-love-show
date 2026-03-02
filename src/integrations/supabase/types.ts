@@ -44,6 +44,7 @@ export type Database = {
           id: string
           is_enabled: boolean
           target_playlist_id: string
+          trigger_date: string | null
           trigger_time: string
         }
         Insert: {
@@ -51,6 +52,7 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           target_playlist_id: string
+          trigger_date?: string | null
           trigger_time?: string
         }
         Update: {
@@ -58,6 +60,7 @@ export type Database = {
           id?: string
           is_enabled?: boolean
           target_playlist_id?: string
+          trigger_date?: string | null
           trigger_time?: string
         }
         Relationships: [

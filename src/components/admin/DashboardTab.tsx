@@ -31,14 +31,11 @@ export default function DashboardTab() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-  // Poll heartbeat status every 10s
   useEffect(() => {
     const interval = setInterval(fetchData, 10000);
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  // Realtime for heartbeat
   useEffect(() => {
     const channel = supabase
       .channel("dashboard-heartbeat")
@@ -54,7 +51,7 @@ export default function DashboardTab() {
     if (rows?.[0]) {
       await supabase.from("settings").update({ manual_override: val }).eq("id", rows[0].id);
     }
-    toast.success(val ? "Automation paused" : "Automation resumed");
+    toast.success(val ? "האוטומציה הושהתה" : "האוטומציה חודשה");
   };
 
   return (
@@ -63,12 +60,12 @@ export default function DashboardTab() {
       <div className="bg-card rounded-xl border border-border p-4">
         <div className="flex items-center gap-3 mb-3">
           <Monitor className="w-5 h-5 text-primary" />
-          <span className="font-semibold text-sm">TV Status</span>
-          <span className={`ml-auto flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+          <span className="font-semibold text-sm">סטטוס מסך</span>
+          <span className={`mr-auto flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
             isLive ? "bg-accent/15 text-accent" : "bg-destructive/15 text-destructive"
           }`}>
             {isLive ? <Wifi className="w-3 h-3" /> : <WifiOff className="w-3 h-3" />}
-            {isLive ? "Live" : "Offline"}
+            {isLive ? "מחובר" : "מנותק"}
           </span>
         </div>
         {heartbeat && isLive && heartbeat.current_slide_url && (
@@ -76,12 +73,12 @@ export default function DashboardTab() {
             {heartbeat.current_slide_url.match(/\.(mp4|webm|ogg|mov)/) ? (
               <video src={heartbeat.current_slide_url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
             ) : (
-              <img src={heartbeat.current_slide_url} alt="Now playing" className="w-full h-full object-cover" />
+              <img src={heartbeat.current_slide_url} alt="מוצג כעת" className="w-full h-full object-cover" />
             )}
           </div>
         )}
         {!isLive && (
-          <p className="text-xs text-muted-foreground">No heartbeat received in the last 30 seconds.</p>
+          <p className="text-xs text-muted-foreground">לא התקבל דופק ב-30 השניות האחרונות.</p>
         )}
       </div>
 
@@ -89,15 +86,15 @@ export default function DashboardTab() {
       <div className="bg-card rounded-xl border border-border p-4">
         <div className="flex items-center gap-2 mb-2">
           <Zap className="w-4 h-4 text-primary" />
-          <span className="font-semibold text-sm">Now Playing</span>
+          <span className="font-semibold text-sm">מוצג כעת</span>
         </div>
         {activePlaylist ? (
           <p className="text-sm text-muted-foreground">
-            Active playlist: <span className="text-foreground font-medium">{activePlaylist.name}</span>
-            {heartbeat && isLive && ` — Slide #${(heartbeat.current_slide_index || 0) + 1}`}
+            פלייליסט פעיל: <span className="text-foreground font-medium">{activePlaylist.name}</span>
+            {heartbeat && isLive && ` — שקף #${(heartbeat.current_slide_index || 0) + 1}`}
           </p>
         ) : (
-          <p className="text-sm text-muted-foreground">No active playlist set.</p>
+          <p className="text-sm text-muted-foreground">לא נבחר פלייליסט פעיל.</p>
         )}
       </div>
 
@@ -106,12 +103,12 @@ export default function DashboardTab() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {manualOverride ? <ShieldOff className="w-4 h-4 text-destructive" /> : <Shield className="w-4 h-4 text-accent" />}
-            <Label className="text-sm font-medium">Manual Override</Label>
+            <Label className="text-sm font-medium">עקיפה ידנית</Label>
           </div>
           <Switch checked={manualOverride} onCheckedChange={toggleOverride} />
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          {manualOverride ? "Automation is paused. Time macros will not trigger." : "Automation is active. Time macros will run."}
+          {manualOverride ? "האוטומציה מושהית. מאקרואים לא יופעלו." : "האוטומציה פעילה. מאקרואים יופעלו."}
         </p>
       </div>
     </div>

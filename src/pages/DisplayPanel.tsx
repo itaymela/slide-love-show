@@ -39,7 +39,6 @@ const DisplayPanel = () => {
     if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
   };
 
-  // Fetch settings
   const fetchSettings = useCallback(async () => {
     const { data } = await supabase.from("settings").select("ticker_text, ticker_enabled, transition_type").limit(1);
     if (data?.[0]) {
@@ -49,7 +48,6 @@ const DisplayPanel = () => {
     }
   }, []);
 
-  // Fetch active playlist slides
   const fetchActiveSlides = useCallback(async () => {
     const { data: playlists } = await supabase.from("playlists").select("id").eq("is_active", true).limit(1);
     const activeId = playlists?.[0]?.id;
@@ -64,7 +62,6 @@ const DisplayPanel = () => {
 
   useEffect(() => { fetchActiveSlides(); fetchSettings(); }, [fetchActiveSlides, fetchSettings]);
 
-  // Realtime
   useEffect(() => {
     const channel = supabase
       .channel("display-realtime")
@@ -75,13 +72,11 @@ const DisplayPanel = () => {
     return () => { supabase.removeChannel(channel); };
   }, [fetchActiveSlides, fetchSettings]);
 
-  // Heartbeat: report current state every 10s
   useEffect(() => {
     const sendHeartbeat = async () => {
       const s = slidesRef.current;
       const idx = currentIndexRef.current;
       const currentUrl = s[idx]?.image_url || "";
-      // Update heartbeat row
       const { data: rows } = await supabase.from("display_heartbeat").select("id").limit(1);
       if (rows?.[0]) {
         await supabase.from("display_heartbeat").update({
@@ -97,23 +92,28 @@ const DisplayPanel = () => {
     return () => { if (heartbeatRef.current) clearInterval(heartbeatRef.current); };
   }, [slides]);
 
-  // Macro checker — runs every 30s
+  // Macro checker with date support
   useEffect(() => {
     const checkMacros = async () => {
-      // Check if manual override is on
       const { data: settingsData } = await supabase.from("settings").select("manual_override").limit(1);
       if (settingsData?.[0]?.manual_override) return;
 
       const now = new Date();
       const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 
       const { data: macros } = await supabase.from("macros").select("*").eq("is_enabled", true).eq("trigger_time", currentTime);
       if (macros && macros.length > 0) {
-        const macro = macros[0];
-        // Check if it's already active
-        const { data: pl } = await supabase.from("playlists").select("is_active").eq("id", macro.target_playlist_id).limit(1);
-        if (pl?.[0] && !pl[0].is_active) {
-          await supabase.rpc("set_active_playlist", { playlist_id: macro.target_playlist_id });
+        for (const macro of macros) {
+          // If trigger_date is set, only fire on that date
+          const triggerDate = (macro as any).trigger_date;
+          if (triggerDate && triggerDate !== currentDate) continue;
+
+          const { data: pl } = await supabase.from("playlists").select("is_active").eq("id", macro.target_playlist_id).limit(1);
+          if (pl?.[0] && !pl[0].is_active) {
+            await supabase.rpc("set_active_playlist", { playlist_id: macro.target_playlist_id });
+          }
+          break; // Only fire the first matching macro
         }
       }
     };
@@ -167,7 +167,6 @@ const DisplayPanel = () => {
     scheduleAdvance(nextSlide);
   }, [scheduleAdvance]);
 
-  // Initialize first slide
   useEffect(() => {
     if (slides.length === 0) return;
     clearTimer();
@@ -207,23 +206,20 @@ const DisplayPanel = () => {
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: "hsl(0 0% 0%)", cursor: "none" }}>
       <div className="relative w-full h-full">
-        {/* Layer A */}
         <div
           className={`absolute inset-0 w-full h-full ${transitionClass}`}
           style={{
-            opacity: isFade ? (activeLayer === "A" ? 1 : 0) : (activeLayer === "A" ? 1 : 0),
+            opacity: activeLayer === "A" ? 1 : 0,
             zIndex: activeLayer === "A" ? 2 : 1,
             ...(isFade ? {} : { transition: "none" }),
           }}
         >
           {renderMedia(slideA, videoARef)}
         </div>
-
-        {/* Layer B */}
         <div
           className={`absolute inset-0 w-full h-full ${transitionClass}`}
           style={{
-            opacity: isFade ? (activeLayer === "B" ? 1 : 0) : (activeLayer === "B" ? 1 : 0),
+            opacity: activeLayer === "B" ? 1 : 0,
             zIndex: activeLayer === "B" ? 2 : 1,
             ...(isFade ? {} : { transition: "none" }),
           }}
@@ -232,12 +228,11 @@ const DisplayPanel = () => {
         </div>
       </div>
 
-      {/* News Ticker */}
       {settings.ticker_enabled && settings.ticker_text && (
         <div className="fixed bottom-0 left-0 right-0 z-50" style={{ backgroundColor: "hsla(0, 0%, 0%, 0.7)" }}>
           <div className="overflow-hidden h-7 flex items-center">
             <div
-              className="whitespace-nowrap animate-ticker text-xs font-medium"
+              className="whitespace-nowrap text-xs font-medium"
               style={{ color: "hsl(0 0% 95%)", animation: "ticker 30s linear infinite" }}
             >
               {settings.ticker_text}
