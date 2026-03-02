@@ -1,0 +1,1 @@
+ALTER TABLE public.macros ADD COLUMN trigger_date text DEFAULT NULL;
