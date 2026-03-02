@@ -14,6 +14,62 @@ export type Database = {
   }
   public: {
     Tables: {
+      display_heartbeat: {
+        Row: {
+          current_slide_index: number | null
+          current_slide_url: string | null
+          id: string
+          last_seen: string
+          updated_at: string
+        }
+        Insert: {
+          current_slide_index?: number | null
+          current_slide_url?: string | null
+          id?: string
+          last_seen?: string
+          updated_at?: string
+        }
+        Update: {
+          current_slide_index?: number | null
+          current_slide_url?: string | null
+          id?: string
+          last_seen?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      macros: {
+        Row: {
+          created_at: string
+          id: string
+          is_enabled: boolean
+          target_playlist_id: string
+          trigger_time: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          target_playlist_id: string
+          trigger_time?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          target_playlist_id?: string
+          trigger_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "macros_target_playlist_id_fkey"
+            columns: ["target_playlist_id"]
+            isOneToOne: false
+            referencedRelation: "playlists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       playlists: {
         Row: {
           created_at: string
@@ -32,6 +88,33 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          id: string
+          manual_override: boolean
+          ticker_enabled: boolean
+          ticker_text: string
+          transition_type: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          manual_override?: boolean
+          ticker_enabled?: boolean
+          ticker_text?: string
+          transition_type?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          manual_override?: boolean
+          ticker_enabled?: boolean
+          ticker_text?: string
+          transition_type?: string
+          updated_at?: string
         }
         Relationships: []
       }
