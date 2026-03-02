@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import {
   Upload, ArrowUp, ArrowDown, Trash2, Save, Monitor,
   Image as ImageIcon, Plus, Check, List, Film,
+  Pencil, Copy, MoreVertical, ArrowRightLeft,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -16,6 +17,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 type Playlist = {
   id: string;
@@ -62,6 +80,11 @@ const AdminPanel = () => {
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [globalObjectFit, setGlobalObjectFit] = useState<"contain" | "cover">("contain");
+
+  // Rename dialog state
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renamePlaylistId, setRenamePlaylistId] = useState<string>("");
+  const [renameValue, setRenameValue] = useState("");
 
   const fetchPlaylists = useCallback(async () => {
     const { data } = await supabase
@@ -128,6 +151,113 @@ const AdminPanel = () => {
     toast.success("Active playlist updated — display will refresh automatically");
   };
 
+  // Rename playlist
+  const openRenameDialog = (playlist: Playlist) => {
+    setRenamePlaylistId(playlist.id);
+    setRenameValue(playlist.name);
+    setRenameDialogOpen(true);
+  };
+
+  const confirmRename = async () => {
+    const name = renameValue.trim();
+    if (!name) return;
+    const { error } = await supabase
+      .from("playlists")
+      .update({ name })
+      .eq("id", renamePlaylistId);
+    if (error) {
+      toast.error("Failed to rename playlist");
+      return;
+    }
+    setPlaylists((prev) =>
+      prev.map((p) => (p.id === renamePlaylistId ? { ...p, name } : p))
+    );
+    setRenameDialogOpen(false);
+    toast.success("Playlist renamed");
+  };
+
+  // Duplicate playlist
+  const duplicatePlaylist = async (sourceId: string) => {
+    const source = playlists.find((p) => p.id === sourceId);
+    if (!source) return;
+
+    // Create new playlist
+    const { data: newPl, error: plErr } = await supabase
+      .from("playlists")
+      .insert({ name: `${source.name} (Copy)` })
+      .select()
+      .single();
+    if (plErr || !newPl) {
+      toast.error("Failed to duplicate playlist");
+      return;
+    }
+
+    // Copy slides
+    const { data: sourceSlides } = await supabase
+      .from("slides")
+      .select("*")
+      .eq("playlist_id", sourceId)
+      .order("sort_order", { ascending: true });
+
+    if (sourceSlides && sourceSlides.length > 0) {
+      const copies = sourceSlides.map((s) => ({
+        image_url: s.image_url,
+        duration: s.duration,
+        sort_order: s.sort_order,
+        object_fit: s.object_fit,
+        media_type: s.media_type,
+        playlist_id: newPl.id,
+      }));
+      await supabase.from("slides").insert(copies);
+    }
+
+    setPlaylists((prev) => [...prev, newPl]);
+    setSelectedPlaylistId(newPl.id);
+    toast.success(`Duplicated as "${newPl.name}"`);
+  };
+
+  // Copy slide to another playlist
+  const copySlideToPlaylist = async (slide: Slide, targetPlaylistId: string) => {
+    const { data: targetSlides } = await supabase
+      .from("slides")
+      .select("sort_order")
+      .eq("playlist_id", targetPlaylistId)
+      .order("sort_order", { ascending: false })
+      .limit(1);
+
+    const nextOrder = (targetSlides?.[0]?.sort_order ?? -1) + 1;
+
+    const { error } = await supabase.from("slides").insert({
+      image_url: slide.image_url,
+      duration: slide.duration,
+      sort_order: nextOrder,
+      object_fit: slide.object_fit,
+      media_type: slide.media_type,
+      playlist_id: targetPlaylistId,
+    });
+    if (error) {
+      toast.error("Failed to copy slide");
+      return;
+    }
+    const target = playlists.find((p) => p.id === targetPlaylistId);
+    toast.success(`Copied to "${target?.name}"`);
+  };
+
+  // Move slide to another playlist
+  const moveSlideToPlaylist = async (slide: Slide, targetPlaylistId: string) => {
+    const { error } = await supabase
+      .from("slides")
+      .update({ playlist_id: targetPlaylistId })
+      .eq("id", slide.id);
+    if (error) {
+      toast.error("Failed to move slide");
+      return;
+    }
+    setSlides((prev) => prev.filter((s) => s.id !== slide.id));
+    const target = playlists.find((p) => p.id === targetPlaylistId);
+    toast.success(`Moved to "${target?.name}"`);
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0 || !selectedPlaylistId) return;
@@ -152,7 +282,6 @@ const AdminPanel = () => {
           .from("images")
           .getPublicUrl(fileName);
 
-        // For videos, try to get the actual duration
         let duration = 5;
         if (mediaType === "video") {
           duration = await getVideoDuration(file);
@@ -231,6 +360,7 @@ const AdminPanel = () => {
   const activePlaylist = playlists.find((p) => p.is_active);
   const selectedPlaylist = playlists.find((p) => p.id === selectedPlaylistId);
   const isSelectedActive = selectedPlaylist?.is_active;
+  const otherPlaylists = playlists.filter((p) => p.id !== selectedPlaylistId);
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -291,6 +421,27 @@ const AdminPanel = () => {
                   ))}
                 </SelectContent>
               </Select>
+
+              {/* Playlist actions dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="icon" className="h-9 w-9 shrink-0">
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => {
+                    const pl = playlists.find((p) => p.id === selectedPlaylistId);
+                    if (pl) openRenameDialog(pl);
+                  }}>
+                    <Pencil className="w-4 h-4 mr-2" /> Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => duplicatePlaylist(selectedPlaylistId)}>
+                    <Copy className="w-4 h-4 mr-2" /> Duplicate
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Button
                 size="sm"
                 className="h-9 gap-1 shrink-0"
@@ -413,6 +564,57 @@ const AdminPanel = () => {
                       <ArrowDown className="w-4 h-4" />
                     </Button>
                     <div className="flex-1" />
+
+                    {/* Slide actions menu */}
+                    {otherPlaylists.length > 0 && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <Copy className="w-4 h-4 mr-2" /> Copy to…
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                              {otherPlaylists.map((p) => (
+                                <DropdownMenuItem
+                                  key={p.id}
+                                  onClick={() => copySlideToPlaylist(slide, p.id)}
+                                >
+                                  {p.name} {p.is_active ? "⚡" : ""}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <ArrowRightLeft className="w-4 h-4 mr-2" /> Move to…
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                              {otherPlaylists.map((p) => (
+                                <DropdownMenuItem
+                                  key={p.id}
+                                  onClick={() => moveSlideToPlaylist(slide, p.id)}
+                                >
+                                  {p.name} {p.is_active ? "⚡" : ""}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => deleteSlide(index)}
+                          >
+                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+
                     <Button
                       variant="ghost"
                       size="icon"
@@ -442,6 +644,26 @@ const AdminPanel = () => {
           </Button>
         </div>
       )}
+
+      {/* Rename Dialog */}
+      <Dialog open={renameDialogOpen} onOpenChange={setRenameDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Rename Playlist</DialogTitle>
+          </DialogHeader>
+          <Input
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && confirmRename()}
+            className="h-10"
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>Cancel</Button>
+            <Button onClick={confirmRename} disabled={!renameValue.trim()}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
