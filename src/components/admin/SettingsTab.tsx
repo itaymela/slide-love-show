@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Save, Type, Sparkles, Timer } from "lucide-react";
+import { Save, Type, Sparkles, Timer, Monitor } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -20,6 +21,9 @@ type Settings = {
   ticker_font_size: number;
   ticker_speed: number;
   transition_duration: number;
+  display_scale: number;
+  display_offset_x: number;
+  display_offset_y: number;
 };
 
 export default function SettingsTab() {
@@ -43,6 +47,9 @@ export default function SettingsTab() {
       ticker_font_size: settings.ticker_font_size,
       ticker_speed: settings.ticker_speed,
       transition_duration: settings.transition_duration,
+      display_scale: settings.display_scale,
+      display_offset_x: settings.display_offset_x,
+      display_offset_y: settings.display_offset_y,
     } as any).eq("id", settings.id);
     setSaving(false);
     if (error) { toast.error("שגיאה בשמירת הגדרות"); return; }
@@ -133,6 +140,52 @@ export default function SettingsTab() {
             onValueChange={([v]) => setSettings(s => s ? { ...s, ticker_speed: v } : s)}
           />
           <p className="text-[11px] text-muted-foreground">זמן סיבוב מלא בשניות (נמוך = מהיר יותר).</p>
+        </div>
+      </div>
+
+      {/* Display Calibration */}
+      <div className="bg-card rounded-xl border border-border p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Monitor className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">כיול תצוגה</span>
+        </div>
+        <p className="text-[11px] text-muted-foreground">תיקון חיתוך קצוות במסכי טלוויזיה (Overscan).</p>
+
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-sm">קנה מידה (%)</Label>
+            <Input
+              type="number"
+              inputMode="numeric"
+              value={settings.display_scale}
+              onChange={(e) => setSettings(s => s ? { ...s, display_scale: Number(e.target.value) || 100 } : s)}
+              className="h-10 text-sm"
+              min={50}
+              max={100}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-sm">הזזה אופקית (פיקסלים)</Label>
+            <Input
+              type="number"
+              inputMode="numeric"
+              value={settings.display_offset_x}
+              onChange={(e) => setSettings(s => s ? { ...s, display_offset_x: Number(e.target.value) || 0 } : s)}
+              className="h-10 text-sm"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-sm">הזזה אנכית (פיקסלים)</Label>
+            <Input
+              type="number"
+              inputMode="numeric"
+              value={settings.display_offset_y}
+              onChange={(e) => setSettings(s => s ? { ...s, display_offset_y: Number(e.target.value) || 0 } : s)}
+              className="h-10 text-sm"
+            />
+          </div>
         </div>
       </div>
 

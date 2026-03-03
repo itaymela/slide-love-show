@@ -96,6 +96,9 @@ export type Database = {
       }
       settings: {
         Row: {
+          display_offset_x: number
+          display_offset_y: number
+          display_scale: number
           id: string
           manual_override: boolean
           ticker_enabled: boolean
@@ -107,6 +110,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          display_offset_x?: number
+          display_offset_y?: number
+          display_scale?: number
           id?: string
           manual_override?: boolean
           ticker_enabled?: boolean
@@ -118,6 +124,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          display_offset_x?: number
+          display_offset_y?: number
+          display_scale?: number
           id?: string
           manual_override?: boolean
           ticker_enabled?: boolean

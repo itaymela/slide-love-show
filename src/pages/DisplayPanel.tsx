@@ -18,6 +18,9 @@ type DisplaySettings = {
   ticker_font_size: number;
   ticker_speed: number;
   transition_duration: number;
+  display_scale: number;
+  display_offset_x: number;
+  display_offset_y: number;
 };
 
 const DisplayPanel = () => {
@@ -29,6 +32,7 @@ const DisplayPanel = () => {
   const [settings, setSettings] = useState<DisplaySettings>({
     ticker_text: "", ticker_enabled: false, transition_type: "fade",
     ticker_font_size: 14, ticker_speed: 30, transition_duration: 0.5,
+    display_scale: 100, display_offset_x: 0, display_offset_y: 0,
   });
 
   const slidesRef = useRef<Slide[]>([]);
@@ -56,6 +60,9 @@ const DisplayPanel = () => {
         ticker_font_size: raw.ticker_font_size ?? 14,
         ticker_speed: raw.ticker_speed ?? 30,
         transition_duration: raw.transition_duration ?? 0.5,
+        display_scale: raw.display_scale ?? 100,
+        display_offset_x: raw.display_offset_x ?? 0,
+        display_offset_y: raw.display_offset_y ?? 0,
       };
       setSettings(s);
       settingsRef.current = s;
@@ -106,7 +113,6 @@ const DisplayPanel = () => {
     return () => { if (heartbeatRef.current) clearInterval(heartbeatRef.current); };
   }, [slides]);
 
-  // Macro checker
   useEffect(() => {
     const checkMacros = async () => {
       const { data: settingsData } = await supabase.from("settings").select("manual_override").limit(1);
@@ -209,61 +215,76 @@ const DisplayPanel = () => {
     return <img src={slide.image_url} alt="" className={`w-full h-full ${fitClass}`} onLoad={onNextReady} />;
   };
 
-  // Prepare ticker text: replace newlines with bullet separator
+  // Prepare ticker text: replace newlines with bullet separator + trailing bullet for seamless loop
   const tickerDisplayText = settings.ticker_text
     .split(/\r?\n/)
     .map(line => line.trim())
     .filter(Boolean)
-    .join(" ● ");
+    .join(" ● ") + " ● ";
 
-  const tickerHeight = settings.ticker_font_size + 16; // padding around text
+  const tickerHeight = settings.ticker_font_size + 16;
+
+  // Calibration transform
+  const scaleFactor = (settings.display_scale || 100) / 100;
+  const offsetX = settings.display_offset_x || 0;
+  const offsetY = settings.display_offset_y || 0;
+  const calibrationTransform = `scale(${scaleFactor}) translate(${offsetX}px, ${offsetY}px)`;
 
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: "hsl(0 0% 0%)", cursor: "none" }}>
-      <div className="relative w-full" style={{ height: settings.ticker_enabled && tickerDisplayText ? `calc(100% - ${tickerHeight}px)` : "100%" }}>
-        <div
-          className="absolute inset-0 w-full h-full"
-          style={{
-            opacity: activeLayer === "A" ? 1 : 0,
-            zIndex: activeLayer === "A" ? 2 : 1,
-            transition: `opacity ${transitionDur} ease-in-out`,
-          }}
-        >
-          {renderMedia(slideA, videoARef)}
-        </div>
-        <div
-          className="absolute inset-0 w-full h-full"
-          style={{
-            opacity: activeLayer === "B" ? 1 : 0,
-            zIndex: activeLayer === "B" ? 2 : 1,
-            transition: `opacity ${transitionDur} ease-in-out`,
-          }}
-        >
-          {renderMedia(slideB, videoBRef)}
-        </div>
-      </div>
-
-      {settings.ticker_enabled && tickerDisplayText && (
-        <div
-          className="fixed bottom-0 left-0 right-0 z-50 flex items-center overflow-hidden"
-          style={{
-            backgroundColor: "hsla(0, 0%, 0%, 0.75)",
-            height: `${tickerHeight}px`,
-          }}
-        >
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          transform: calibrationTransform,
+          transformOrigin: "center center",
+        }}
+      >
+        <div className="relative w-full" style={{ height: settings.ticker_enabled && tickerDisplayText.length > 3 ? `calc(100% - ${tickerHeight}px)` : "100%" }}>
           <div
-            className="whitespace-nowrap font-medium"
+            className="absolute inset-0 w-full h-full"
             style={{
-              color: "hsl(0 0% 95%)",
-              fontSize: `${settings.ticker_font_size}px`,
-              animation: `ticker-rtl ${settings.ticker_speed}s linear infinite`,
+              opacity: activeLayer === "A" ? 1 : 0,
+              zIndex: activeLayer === "A" ? 2 : 1,
+              transition: `opacity ${transitionDur} ease-in-out`,
             }}
           >
-            {tickerDisplayText}
-            <span className="mx-24">{tickerDisplayText}</span>
+            {renderMedia(slideA, videoARef)}
+          </div>
+          <div
+            className="absolute inset-0 w-full h-full"
+            style={{
+              opacity: activeLayer === "B" ? 1 : 0,
+              zIndex: activeLayer === "B" ? 2 : 1,
+              transition: `opacity ${transitionDur} ease-in-out`,
+            }}
+          >
+            {renderMedia(slideB, videoBRef)}
           </div>
         </div>
-      )}
+
+        {settings.ticker_enabled && tickerDisplayText.length > 3 && (
+          <div
+            className="absolute bottom-0 left-0 right-0 z-50 flex items-center overflow-hidden"
+            style={{
+              backgroundColor: "hsla(0, 0%, 0%, 0.75)",
+              height: `${tickerHeight}px`,
+            }}
+          >
+            <div
+              className="whitespace-nowrap font-medium"
+              style={{
+                color: "hsl(0 0% 95%)",
+                fontSize: `${settings.ticker_font_size}px`,
+                animation: `ticker-rtl ${settings.ticker_speed}s linear infinite`,
+              }}
+            >
+              {tickerDisplayText}
+              <span className="mx-24">{tickerDisplayText}</span>
+            </div>
+          </div>
+        )}
+      </div>
 
       <style>{`
         @keyframes ticker-rtl {
