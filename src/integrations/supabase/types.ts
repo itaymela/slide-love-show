@@ -96,6 +96,8 @@ export type Database = {
       }
       settings: {
         Row: {
+          birthday_enabled: boolean
+          birthday_sheet_url: string
           display_offset_x: number
           display_offset_y: number
           display_scale: number
@@ -113,6 +115,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          birthday_enabled?: boolean
+          birthday_sheet_url?: string
           display_offset_x?: number
           display_offset_y?: number
           display_scale?: number
@@ -130,6 +134,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          birthday_enabled?: boolean
+          birthday_sheet_url?: string
           display_offset_x?: number
           display_offset_y?: number
           display_scale?: number
