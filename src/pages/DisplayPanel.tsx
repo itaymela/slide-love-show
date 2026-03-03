@@ -15,6 +15,9 @@ type DisplaySettings = {
   ticker_text: string;
   ticker_enabled: boolean;
   transition_type: string;
+  ticker_font_size: number;
+  ticker_speed: number;
+  transition_duration: number;
 };
 
 const DisplayPanel = () => {
@@ -23,7 +26,10 @@ const DisplayPanel = () => {
   const [slideA, setSlideA] = useState<Slide | null>(null);
   const [slideB, setSlideB] = useState<Slide | null>(null);
   const [objectFit, setObjectFit] = useState<"contain" | "cover">("contain");
-  const [settings, setSettings] = useState<DisplaySettings>({ ticker_text: "", ticker_enabled: false, transition_type: "fade" });
+  const [settings, setSettings] = useState<DisplaySettings>({
+    ticker_text: "", ticker_enabled: false, transition_type: "fade",
+    ticker_font_size: 14, ticker_speed: 30, transition_duration: 0.5,
+  });
 
   const slidesRef = useRef<Slide[]>([]);
   const currentIndexRef = useRef(0);
@@ -40,9 +46,17 @@ const DisplayPanel = () => {
   };
 
   const fetchSettings = useCallback(async () => {
-    const { data } = await supabase.from("settings").select("ticker_text, ticker_enabled, transition_type").limit(1);
+    const { data } = await supabase.from("settings").select("*").limit(1);
     if (data?.[0]) {
-      const s = data[0] as DisplaySettings;
+      const raw = data[0] as any;
+      const s: DisplaySettings = {
+        ticker_text: raw.ticker_text || "",
+        ticker_enabled: raw.ticker_enabled ?? false,
+        transition_type: raw.transition_type || "fade",
+        ticker_font_size: raw.ticker_font_size ?? 14,
+        ticker_speed: raw.ticker_speed ?? 30,
+        transition_duration: raw.transition_duration ?? 0.5,
+      };
       setSettings(s);
       settingsRef.current = s;
     }
@@ -92,28 +106,24 @@ const DisplayPanel = () => {
     return () => { if (heartbeatRef.current) clearInterval(heartbeatRef.current); };
   }, [slides]);
 
-  // Macro checker with date support
+  // Macro checker
   useEffect(() => {
     const checkMacros = async () => {
       const { data: settingsData } = await supabase.from("settings").select("manual_override").limit(1);
       if (settingsData?.[0]?.manual_override) return;
-
       const now = new Date();
       const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
       const currentDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-
       const { data: macros } = await supabase.from("macros").select("*").eq("is_enabled", true).eq("trigger_time", currentTime);
       if (macros && macros.length > 0) {
         for (const macro of macros) {
-          // If trigger_date is set, only fire on that date
           const triggerDate = (macro as any).trigger_date;
           if (triggerDate && triggerDate !== currentDate) continue;
-
           const { data: pl } = await supabase.from("playlists").select("is_active").eq("id", macro.target_playlist_id).limit(1);
           if (pl?.[0] && !pl[0].is_active) {
             await supabase.rpc("set_active_playlist", { playlist_id: macro.target_playlist_id });
           }
-          break; // Only fire the first matching macro
+          break;
         }
       }
     };
@@ -137,10 +147,8 @@ const DisplayPanel = () => {
     const nextSlide = s[next];
     const currentLayer = activeLayerRef.current;
     const nextLayer = currentLayer === "A" ? "B" : "A";
-
     if (nextLayer === "A") setSlideA(nextSlide);
     else setSlideB(nextSlide);
-
     nextReadyRef.current = false;
     const waitForReady = () => {
       if (nextReadyRef.current) {
@@ -160,10 +168,8 @@ const DisplayPanel = () => {
     activeLayerRef.current = nextLayer;
     setActiveLayer(nextLayer);
     currentIndexRef.current = nextIndex;
-
     const oldVideo = (nextLayer === "A" ? videoBRef : videoARef).current;
     if (oldVideo) oldVideo.pause();
-
     scheduleAdvance(nextSlide);
   }, [scheduleAdvance]);
 
@@ -185,7 +191,7 @@ const DisplayPanel = () => {
 
   const fitClass = objectFit === "cover" ? "object-cover" : "object-contain";
   const isFade = settings.transition_type === "fade";
-  const transitionClass = isFade ? "transition-opacity duration-500 ease-in-out" : "";
+  const transitionDur = isFade ? `${settings.transition_duration}s` : "0s";
 
   const renderMedia = (slide: Slide | null, videoRef: React.MutableRefObject<HTMLVideoElement | null>) => {
     if (!slide) return null;
@@ -203,49 +209,66 @@ const DisplayPanel = () => {
     return <img src={slide.image_url} alt="" className={`w-full h-full ${fitClass}`} onLoad={onNextReady} />;
   };
 
+  // Prepare ticker text: replace newlines with bullet separator
+  const tickerDisplayText = settings.ticker_text
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean)
+    .join(" ● ");
+
+  const tickerHeight = settings.ticker_font_size + 16; // padding around text
+
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: "hsl(0 0% 0%)", cursor: "none" }}>
-      <div className="relative w-full h-full">
+      <div className="relative w-full" style={{ height: settings.ticker_enabled && tickerDisplayText ? `calc(100% - ${tickerHeight}px)` : "100%" }}>
         <div
-          className={`absolute inset-0 w-full h-full ${transitionClass}`}
+          className="absolute inset-0 w-full h-full"
           style={{
             opacity: activeLayer === "A" ? 1 : 0,
             zIndex: activeLayer === "A" ? 2 : 1,
-            ...(isFade ? {} : { transition: "none" }),
+            transition: `opacity ${transitionDur} ease-in-out`,
           }}
         >
           {renderMedia(slideA, videoARef)}
         </div>
         <div
-          className={`absolute inset-0 w-full h-full ${transitionClass}`}
+          className="absolute inset-0 w-full h-full"
           style={{
             opacity: activeLayer === "B" ? 1 : 0,
             zIndex: activeLayer === "B" ? 2 : 1,
-            ...(isFade ? {} : { transition: "none" }),
+            transition: `opacity ${transitionDur} ease-in-out`,
           }}
         >
           {renderMedia(slideB, videoBRef)}
         </div>
       </div>
 
-      {settings.ticker_enabled && settings.ticker_text && (
-        <div className="fixed bottom-0 left-0 right-0 z-50" style={{ backgroundColor: "hsla(0, 0%, 0%, 0.7)" }}>
-          <div className="overflow-hidden h-7 flex items-center">
-            <div
-              className="whitespace-nowrap text-xs font-medium"
-              style={{ color: "hsl(0 0% 95%)", animation: "ticker 30s linear infinite" }}
-            >
-              {settings.ticker_text}
-              <span className="mx-16">{settings.ticker_text}</span>
-            </div>
+      {settings.ticker_enabled && tickerDisplayText && (
+        <div
+          className="fixed bottom-0 left-0 right-0 z-50 flex items-center overflow-hidden"
+          style={{
+            backgroundColor: "hsla(0, 0%, 0%, 0.75)",
+            height: `${tickerHeight}px`,
+          }}
+        >
+          <div
+            className="whitespace-nowrap font-medium"
+            style={{
+              color: "hsl(0 0% 95%)",
+              fontSize: `${settings.ticker_font_size}px`,
+              animation: `ticker-rtl ${settings.ticker_speed}s linear infinite`,
+            }}
+          >
+            {tickerDisplayText}
+            <span className="mx-24">{tickerDisplayText}</span>
           </div>
         </div>
       )}
 
       <style>{`
-        @keyframes ticker {
-          0% { transform: translateX(100vw); }
-          100% { transform: translateX(-100%); }
+        @keyframes ticker-rtl {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100vw); }
         }
       `}</style>
     </div>

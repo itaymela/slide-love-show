@@ -99,7 +99,10 @@ export type Database = {
           id: string
           manual_override: boolean
           ticker_enabled: boolean
+          ticker_font_size: number
+          ticker_speed: number
           ticker_text: string
+          transition_duration: number
           transition_type: string
           updated_at: string
         }
@@ -107,7 +110,10 @@ export type Database = {
           id?: string
           manual_override?: boolean
           ticker_enabled?: boolean
+          ticker_font_size?: number
+          ticker_speed?: number
           ticker_text?: string
+          transition_duration?: number
           transition_type?: string
           updated_at?: string
         }
@@ -115,7 +121,10 @@ export type Database = {
           id?: string
           manual_override?: boolean
           ticker_enabled?: boolean
+          ticker_font_size?: number
+          ticker_speed?: number
           ticker_text?: string
+          transition_duration?: number
           transition_type?: string
           updated_at?: string
         }
