@@ -101,6 +101,9 @@ export type Database = {
           display_scale: number
           id: string
           manual_override: boolean
+          overlay_position: string
+          overlay_size: number
+          overlay_url: string
           ticker_enabled: boolean
           ticker_font_size: number
           ticker_speed: number
@@ -115,6 +118,9 @@ export type Database = {
           display_scale?: number
           id?: string
           manual_override?: boolean
+          overlay_position?: string
+          overlay_size?: number
+          overlay_url?: string
           ticker_enabled?: boolean
           ticker_font_size?: number
           ticker_speed?: number
@@ -129,6 +135,9 @@ export type Database = {
           display_scale?: number
           id?: string
           manual_override?: boolean
+          overlay_position?: string
+          overlay_size?: number
+          overlay_url?: string
           ticker_enabled?: boolean
           ticker_font_size?: number
           ticker_speed?: number

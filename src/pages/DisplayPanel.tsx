@@ -21,6 +21,9 @@ type DisplaySettings = {
   display_scale: number;
   display_offset_x: number;
   display_offset_y: number;
+  overlay_url: string;
+  overlay_position: string;
+  overlay_size: number;
 };
 
 const DisplayPanel = () => {
@@ -33,6 +36,7 @@ const DisplayPanel = () => {
     ticker_text: "", ticker_enabled: false, transition_type: "fade",
     ticker_font_size: 14, ticker_speed: 30, transition_duration: 0.5,
     display_scale: 100, display_offset_x: 0, display_offset_y: 0,
+    overlay_url: "", overlay_position: "top-right", overlay_size: 50,
   });
 
   const slidesRef = useRef<Slide[]>([]);
@@ -63,6 +67,9 @@ const DisplayPanel = () => {
         display_scale: raw.display_scale ?? 100,
         display_offset_x: raw.display_offset_x ?? 0,
         display_offset_y: raw.display_offset_y ?? 0,
+        overlay_url: raw.overlay_url || "",
+        overlay_position: raw.overlay_position || "top-right",
+        overlay_size: raw.overlay_size ?? 50,
       };
       setSettings(s);
       settingsRef.current = s;
@@ -215,7 +222,6 @@ const DisplayPanel = () => {
     return <img src={slide.image_url} alt="" className={`w-full h-full ${fitClass}`} onLoad={onNextReady} />;
   };
 
-  // Prepare ticker text: replace newlines with bullet separator + trailing bullet for seamless loop
   const tickerDisplayText = settings.ticker_text
     .split(/\r?\n/)
     .map(line => line.trim())
@@ -224,11 +230,18 @@ const DisplayPanel = () => {
 
   const tickerHeight = settings.ticker_font_size + 16;
 
-  // Calibration transform
   const scaleFactor = (settings.display_scale || 100) / 100;
   const offsetX = settings.display_offset_x || 0;
   const offsetY = settings.display_offset_y || 0;
   const calibrationTransform = `scale(${scaleFactor}) translate(${offsetX}px, ${offsetY}px)`;
+
+  // Overlay position styles
+  const overlayPositionStyles: Record<string, React.CSSProperties> = {
+    "top-right": { top: 12, right: 12 },
+    "top-left": { top: 12, left: 12 },
+    "bottom-right": { bottom: settings.ticker_enabled ? tickerHeight + 12 : 12, right: 12 },
+    "bottom-left": { bottom: settings.ticker_enabled ? tickerHeight + 12 : 12, left: 12 },
+  };
 
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: "hsl(0 0% 0%)", cursor: "none" }}>
@@ -262,6 +275,22 @@ const DisplayPanel = () => {
             {renderMedia(slideB, videoBRef)}
           </div>
         </div>
+
+        {/* Graphic Overlay */}
+        {settings.overlay_url && (
+          <img
+            src={settings.overlay_url}
+            alt=""
+            style={{
+              position: "absolute",
+              zIndex: 40,
+              width: `${settings.overlay_size}px`,
+              height: "auto",
+              pointerEvents: "none",
+              ...overlayPositionStyles[settings.overlay_position],
+            }}
+          />
+        )}
 
         {settings.ticker_enabled && tickerDisplayText.length > 3 && (
           <div
