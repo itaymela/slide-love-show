@@ -64,8 +64,8 @@ export default function AutomationTab() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="bg-card rounded-xl border border-border p-4 space-y-3">
+    <div className="space-y-5">
+      <div className="bg-card rounded-xl border border-border p-4 space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <Clock className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold">מאקרואים מתוזמנים</span>
@@ -74,34 +74,30 @@ export default function AutomationTab() {
           תזמון החלפת פלייליסט אוטומטית. ניתן להשבית דרך "עקיפה ידנית" בלוח הבקרה.
         </p>
 
-        {/* Add new macro */}
-        <div className="space-y-2">
-          <div className="flex gap-2 items-end">
-            <div className="flex-1 space-y-1">
-              <span className="text-xs text-muted-foreground">שעה</span>
-              <Input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} className="h-9 text-sm" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <span className="text-xs text-muted-foreground">תאריך (אופציונלי)</span>
-              <Input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} className="h-9 text-sm" />
-            </div>
+        {/* Add new macro - vertical stacked layout */}
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <span className="text-xs text-muted-foreground">שעה</span>
+            <Input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} className="h-10 text-sm w-full" />
           </div>
-          <div className="flex gap-2 items-end">
-            <div className="flex-1 space-y-1">
-              <span className="text-xs text-muted-foreground">החלף לפלייליסט</span>
-              <Select value={newTargetId} onValueChange={setNewTargetId}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {playlists.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <Button size="sm" className="h-9 gap-1 shrink-0" onClick={addMacro}>
-              <Plus className="w-3.5 h-3.5" /> הוסף
-            </Button>
+          <div className="space-y-1">
+            <span className="text-xs text-muted-foreground">תאריך (אופציונלי)</span>
+            <Input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} className="h-10 text-sm w-full" />
           </div>
+          <div className="space-y-1">
+            <span className="text-xs text-muted-foreground">החלף לפלייליסט</span>
+            <Select value={newTargetId} onValueChange={setNewTargetId}>
+              <SelectTrigger className="h-10 text-sm w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {playlists.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button className="w-full h-10 gap-1" onClick={addMacro}>
+            <Plus className="w-4 h-4" /> הוסף מאקרו
+          </Button>
         </div>
       </div>
 
@@ -112,22 +108,22 @@ export default function AutomationTab() {
           <p className="text-sm">אין מאקרואים עדיין. הוסף אחד למעלה.</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {macros.map(macro => (
-            <div key={macro.id} className="bg-card rounded-xl border border-border p-3 flex items-center gap-3">
-              <div className="flex-1">
-                <p className="text-sm font-medium">
-                  בשעה <span className="font-bold text-primary">{macro.trigger_time}</span>
-                  {macro.trigger_date && (
-                    <span className="text-muted-foreground"> ({formatDate(macro.trigger_date)})</span>
-                  )}
-                  {" "}החלף ל-<span className="font-semibold">{getPlaylistName(macro.target_playlist_id)}</span>
-                </p>
+            <div key={macro.id} className="bg-card rounded-xl border border-border p-4 space-y-2">
+              <p className="text-sm font-medium">
+                בשעה <span className="font-bold text-primary">{macro.trigger_time}</span>
+                {macro.trigger_date && (
+                  <span className="text-muted-foreground"> ({formatDate(macro.trigger_date)})</span>
+                )}
+                {" "}החלף ל-<span className="font-semibold">{getPlaylistName(macro.target_playlist_id)}</span>
+              </p>
+              <div className="flex items-center justify-between">
+                <Switch checked={macro.is_enabled} onCheckedChange={(v) => toggleMacro(macro.id, v)} />
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteMacro(macro.id)}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
-              <Switch checked={macro.is_enabled} onCheckedChange={(v) => toggleMacro(macro.id, v)} />
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteMacro(macro.id)}>
-                <Trash2 className="w-4 h-4" />
-              </Button>
             </div>
           ))}
         </div>
