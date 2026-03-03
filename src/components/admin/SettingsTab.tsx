@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Save, Type, Sparkles, Timer, Monitor, Image, Upload } from "lucide-react";
+import { Save, Type, Sparkles, Timer, Monitor, Image, Upload, Cake, RefreshCw } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -27,12 +27,17 @@ type Settings = {
   overlay_url: string;
   overlay_position: string;
   overlay_size: number;
+  birthday_sheet_url: string;
+  birthday_enabled: boolean;
 };
 
 export default function SettingsTab() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [birthdayStatus, setBirthdayStatus] = useState<"idle" | "success" | "error">("idle");
+  const [birthdayNames, setBirthdayNames] = useState<string[]>([]);
+  const [fetchingBirthdays, setFetchingBirthdays] = useState(false);
 
   const fetchSettings = useCallback(async () => {
     const { data } = await supabase.from("settings").select("*").limit(1);
@@ -55,6 +60,35 @@ export default function SettingsTab() {
     toast.success("התמונה הועלתה בהצלחה");
   };
 
+  const fetchBirthdayNames = useCallback(async (url: string) => {
+    if (!url) { setBirthdayNames([]); setBirthdayStatus("idle"); return; }
+    setFetchingBirthdays(true);
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("fetch failed");
+      const text = await res.text();
+      const rows = text.split("\n").slice(1); // skip header
+      const names = rows
+        .map(row => {
+          const cols = row.split(",");
+          return (cols[4] || "").replace(/^"|"$/g, "").trim();
+        })
+        .filter(Boolean);
+      setBirthdayNames(names);
+      setBirthdayStatus("success");
+    } catch {
+      setBirthdayNames([]);
+      setBirthdayStatus("error");
+    }
+    setFetchingBirthdays(false);
+  }, []);
+
+  useEffect(() => {
+    if (settings?.birthday_enabled && settings?.birthday_sheet_url) {
+      fetchBirthdayNames(settings.birthday_sheet_url);
+    }
+  }, [settings?.birthday_enabled, settings?.birthday_sheet_url, fetchBirthdayNames]);
+
   const save = async () => {
     if (!settings) return;
     setSaving(true);
@@ -71,6 +105,8 @@ export default function SettingsTab() {
       overlay_url: settings.overlay_url,
       overlay_position: settings.overlay_position,
       overlay_size: settings.overlay_size,
+      birthday_sheet_url: settings.birthday_sheet_url,
+      birthday_enabled: settings.birthday_enabled,
     } as any).eq("id", settings.id);
     setSaving(false);
     if (error) { toast.error("שגיאה בשמירת הגדרות"); return; }
@@ -145,6 +181,56 @@ export default function SettingsTab() {
           <Slider min={10} max={120} step={5} value={[settings.ticker_speed]} onValueChange={([v]) => setSettings(s => s ? { ...s, ticker_speed: v } : s)} />
           <p className="text-[11px] text-muted-foreground">זמן סיבוב מלא בשניות (נמוך = מהיר יותר).</p>
         </div>
+      </div>
+
+      {/* Birthday Google Sheets */}
+      <div className="bg-card rounded-xl border border-border p-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Cake className="w-4 h-4 text-primary" />
+            <span className="text-sm font-semibold">חיבור ימי הולדת מ-Google Sheets</span>
+          </div>
+          <Switch checked={settings.birthday_enabled} onCheckedChange={(v) => setSettings(s => s ? { ...s, birthday_enabled: v } : s)} />
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-sm">קישור CSV (פרסום לאינטרנט)</Label>
+          <Input
+            type="url"
+            placeholder="https://docs.google.com/spreadsheets/d/.../pub?output=csv"
+            value={settings.birthday_sheet_url}
+            onChange={(e) => setSettings(s => s ? { ...s, birthday_sheet_url: e.target.value } : s)}
+            className="h-10 text-sm"
+            dir="ltr"
+          />
+          <p className="text-[11px] text-muted-foreground">הדבק את קישור ה-CSV מ-Google Sheets → קובץ → פרסום לאינטרנט.</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchBirthdayNames(settings.birthday_sheet_url)}
+            disabled={fetchingBirthdays || !settings.birthday_sheet_url}
+            className="gap-2"
+          >
+            <RefreshCw className={`w-4 h-4 ${fetchingBirthdays ? "animate-spin" : ""}`} />
+            רענון ידני
+          </Button>
+          {birthdayStatus === "success" && (
+            <span className="text-xs text-green-600">✓ נתונים נמשכו בהצלחה ({birthdayNames.length} שמות)</span>
+          )}
+          {birthdayStatus === "error" && (
+            <span className="text-xs text-destructive">✗ שגיאה במשיכת נתונים</span>
+          )}
+        </div>
+
+        {birthdayNames.length > 0 && (
+          <div className="p-2 rounded-lg bg-muted/50">
+            <p className="text-xs text-muted-foreground mb-1">תצוגה מקדימה:</p>
+            <p className="text-sm" dir="rtl">🎂 {birthdayNames.join(" ● ")}</p>
+          </div>
+        )}
       </div>
 
       {/* Graphic Overlay */}

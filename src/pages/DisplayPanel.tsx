@@ -24,6 +24,8 @@ type DisplaySettings = {
   overlay_url: string;
   overlay_position: string;
   overlay_size: number;
+  birthday_sheet_url: string;
+  birthday_enabled: boolean;
 };
 
 const DisplayPanel = () => {
@@ -37,7 +39,10 @@ const DisplayPanel = () => {
     ticker_font_size: 14, ticker_speed: 30, transition_duration: 0.5,
     display_scale: 100, display_offset_x: 0, display_offset_y: 0,
     overlay_url: "", overlay_position: "top-right", overlay_size: 50,
+    birthday_sheet_url: "", birthday_enabled: false,
   });
+  const [birthdayNames, setBirthdayNames] = useState<string[]>([]);
+  const birthdayIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const slidesRef = useRef<Slide[]>([]);
   const currentIndexRef = useRef(0);
@@ -68,6 +73,8 @@ const DisplayPanel = () => {
         display_offset_x: raw.display_offset_x ?? 0,
         display_offset_y: raw.display_offset_y ?? 0,
         overlay_url: raw.overlay_url || "",
+        birthday_sheet_url: raw.birthday_sheet_url || "",
+        birthday_enabled: raw.birthday_enabled ?? false,
         overlay_position: raw.overlay_position || "top-right",
         overlay_size: raw.overlay_size ?? 50,
       };
@@ -88,7 +95,40 @@ const DisplayPanel = () => {
     } else { slidesRef.current = []; setSlides([]); }
   }, []);
 
+  const fetchBirthdays = useCallback(async () => {
+    const url = settingsRef.current.birthday_sheet_url;
+    const enabled = settingsRef.current.birthday_enabled;
+    if (!enabled || !url) { setBirthdayNames([]); return; }
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("fetch failed");
+      const text = await res.text();
+      const rows = text.split("\n").slice(1);
+      const names = rows
+        .map(row => {
+          const cols = row.split(",");
+          return (cols[4] || "").replace(/^"|"$/g, "").trim();
+        })
+        .filter(Boolean);
+      setBirthdayNames(names);
+    } catch {
+      setBirthdayNames([]);
+    }
+  }, []);
+
   useEffect(() => { fetchActiveSlides(); fetchSettings(); }, [fetchActiveSlides, fetchSettings]);
+
+  // Fetch birthdays on load and every hour
+  useEffect(() => {
+    fetchBirthdays();
+    birthdayIntervalRef.current = setInterval(fetchBirthdays, 3600000);
+    return () => { if (birthdayIntervalRef.current) clearInterval(birthdayIntervalRef.current); };
+  }, [fetchBirthdays]);
+
+  // Re-fetch birthdays when settings change
+  useEffect(() => {
+    fetchBirthdays();
+  }, [settings.birthday_enabled, settings.birthday_sheet_url, fetchBirthdays]);
 
   useEffect(() => {
     const channel = supabase
@@ -222,11 +262,18 @@ const DisplayPanel = () => {
     return <img src={slide.image_url} alt="" className={`w-full h-full ${fitClass}`} onLoad={onNextReady} />;
   };
 
-  const tickerDisplayText = settings.ticker_text
+  const customTickerPart = settings.ticker_text
     .split(/\r?\n/)
     .map(line => line.trim())
     .filter(Boolean)
-    .join(" ● ") + " ● ";
+    .join(" ● ");
+
+  const birthdayPart = birthdayNames.length > 0
+    ? "🎂 " + birthdayNames.join(" ● ")
+    : "";
+
+  const tickerParts = [customTickerPart, birthdayPart].filter(Boolean);
+  const tickerDisplayText = tickerParts.join(" ● ") + " ● ";
 
   const tickerHeight = settings.ticker_font_size + 16;
 
