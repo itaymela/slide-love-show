@@ -1,9 +1,13 @@
 import { useState } from "react";
-import { Monitor, LayoutDashboard, ListMusic, Zap, Settings } from "lucide-react";
+import { Monitor, LayoutDashboard, ListMusic, Zap, Settings, Lock } from "lucide-react";
 import DashboardTab from "@/components/admin/DashboardTab";
 import PlaylistsTab from "@/components/admin/PlaylistsTab";
 import AutomationTab from "@/components/admin/AutomationTab";
 import SettingsTab from "@/components/admin/SettingsTab";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+const ADMIN_PIN = "8888";
 
 const tabs = [
   { id: "dashboard", label: "לוח בקרה", icon: LayoutDashboard },
@@ -16,6 +20,51 @@ type TabId = typeof tabs[number]["id"];
 
 const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+  const [isUnlocked, setIsUnlocked] = useState(() => sessionStorage.getItem("admin_unlocked") === "true");
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState(false);
+
+  const handlePinSubmit = () => {
+    if (pin === ADMIN_PIN) {
+      sessionStorage.setItem("admin_unlocked", "true");
+      setIsUnlocked(true);
+    } else {
+      setPinError(true);
+      setPin("");
+      setTimeout(() => setPinError(false), 2000);
+    }
+  };
+
+  if (!isUnlocked) {
+    return (
+      <div dir="rtl" className="min-h-screen bg-background flex items-center justify-center px-6">
+        <div className="w-full max-w-xs space-y-6 text-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+              <Lock className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-xl font-bold">כניסה לניהול</h1>
+            <p className="text-sm text-muted-foreground">הזן קוד גישה</p>
+          </div>
+          <Input
+            type="password"
+            inputMode="numeric"
+            maxLength={4}
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ""))}
+            onKeyDown={(e) => e.key === "Enter" && handlePinSubmit()}
+            placeholder="● ● ● ●"
+            className={`h-14 text-center text-2xl tracking-[0.5em] font-mono ${pinError ? "border-destructive" : ""}`}
+            autoFocus
+          />
+          {pinError && <p className="text-sm text-destructive">קוד שגוי, נסה שנית</p>}
+          <Button onClick={handlePinSubmit} className="w-full h-12 text-base font-semibold">
+            כניסה
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div dir="rtl" className="min-h-screen bg-background pb-20">

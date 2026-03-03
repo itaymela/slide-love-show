@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Save, Type, Sparkles, Timer, Monitor } from "lucide-react";
+import { Save, Type, Sparkles, Timer, Monitor, Image, Upload } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -24,11 +24,15 @@ type Settings = {
   display_scale: number;
   display_offset_x: number;
   display_offset_y: number;
+  overlay_url: string;
+  overlay_position: string;
+  overlay_size: number;
 };
 
 export default function SettingsTab() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const fetchSettings = useCallback(async () => {
     const { data } = await supabase.from("settings").select("*").limit(1);
@@ -36,6 +40,20 @@ export default function SettingsTab() {
   }, []);
 
   useEffect(() => { fetchSettings(); }, [fetchSettings]);
+
+  const handleOverlayUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const path = `overlay/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("images").upload(path, file, { upsert: true });
+    if (error) { toast.error("שגיאה בהעלאת תמונה"); setUploading(false); return; }
+    const { data: urlData } = supabase.storage.from("images").getPublicUrl(path);
+    setSettings(s => s ? { ...s, overlay_url: urlData.publicUrl } : s);
+    setUploading(false);
+    toast.success("התמונה הועלתה בהצלחה");
+  };
 
   const save = async () => {
     if (!settings) return;
@@ -50,6 +68,9 @@ export default function SettingsTab() {
       display_scale: settings.display_scale,
       display_offset_x: settings.display_offset_x,
       display_offset_y: settings.display_offset_y,
+      overlay_url: settings.overlay_url,
+      overlay_position: settings.overlay_position,
+      overlay_size: settings.overlay_size,
     } as any).eq("id", settings.id);
     setSaving(false);
     if (error) { toast.error("שגיאה בשמירת הגדרות"); return; }
@@ -74,7 +95,6 @@ export default function SettingsTab() {
           </SelectContent>
         </Select>
 
-        {/* Transition Duration */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -84,9 +104,7 @@ export default function SettingsTab() {
             <span className="text-xs font-mono text-muted-foreground">{settings.transition_duration}s</span>
           </div>
           <Slider
-            min={1}
-            max={20}
-            step={1}
+            min={1} max={20} step={1}
             value={[settings.transition_duration * 10]}
             onValueChange={([v]) => setSettings(s => s ? { ...s, transition_duration: v / 10 } : s)}
           />
@@ -111,35 +129,73 @@ export default function SettingsTab() {
         />
         <p className="text-[11px] text-muted-foreground">שורות חדשות (Enter) יוצגו כ- " ● " בפס הרץ.</p>
 
-        {/* Font size slider */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label className="text-sm">גודל גופן פס רץ</Label>
             <span className="text-xs font-mono text-muted-foreground">{settings.ticker_font_size}px</span>
           </div>
-          <Slider
-            min={12}
-            max={32}
-            step={1}
-            value={[settings.ticker_font_size]}
-            onValueChange={([v]) => setSettings(s => s ? { ...s, ticker_font_size: v } : s)}
-          />
+          <Slider min={12} max={32} step={1} value={[settings.ticker_font_size]} onValueChange={([v]) => setSettings(s => s ? { ...s, ticker_font_size: v } : s)} />
         </div>
 
-        {/* Speed slider */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <Label className="text-sm">מהירות גלילה</Label>
             <span className="text-xs font-mono text-muted-foreground">{settings.ticker_speed}s</span>
           </div>
-          <Slider
-            min={10}
-            max={120}
-            step={5}
-            value={[settings.ticker_speed]}
-            onValueChange={([v]) => setSettings(s => s ? { ...s, ticker_speed: v } : s)}
-          />
+          <Slider min={10} max={120} step={5} value={[settings.ticker_speed]} onValueChange={([v]) => setSettings(s => s ? { ...s, ticker_speed: v } : s)} />
           <p className="text-[11px] text-muted-foreground">זמן סיבוב מלא בשניות (נמוך = מהיר יותר).</p>
+        </div>
+      </div>
+
+      {/* Graphic Overlay */}
+      <div className="bg-card rounded-xl border border-border p-4 space-y-4">
+        <div className="flex items-center gap-2">
+          <Image className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">שכבה גרפית</span>
+        </div>
+        <p className="text-[11px] text-muted-foreground">העלה תמונה (PNG שקוף מומלץ) שתוצג מעל השקופיות.</p>
+
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-sm">העלאת תמונה</Label>
+            <div className="flex items-center gap-2">
+              <label className="flex-1 flex items-center justify-center gap-2 h-10 rounded-md border border-input bg-background px-3 text-sm cursor-pointer hover:bg-accent transition-colors">
+                <Upload className="w-4 h-4" />
+                <span>{uploading ? "מעלה..." : "בחר תמונה"}</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleOverlayUpload} disabled={uploading} />
+              </label>
+            </div>
+            {settings.overlay_url && (
+              <div className="flex items-center gap-3 mt-2 p-2 rounded-lg bg-muted/50">
+                <img src={settings.overlay_url} alt="overlay" className="w-12 h-12 object-contain rounded" />
+                <span className="text-xs text-muted-foreground truncate flex-1">תמונה נטענה</span>
+                <Button variant="ghost" size="sm" onClick={() => setSettings(s => s ? { ...s, overlay_url: "" } : s)} className="text-xs text-destructive">
+                  הסר
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-sm">מיקום</Label>
+            <Select value={settings.overlay_position} onValueChange={(v) => setSettings(s => s ? { ...s, overlay_position: v } : s)}>
+              <SelectTrigger className="h-10 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="top-right">למעלה מימין</SelectItem>
+                <SelectItem value="top-left">למעלה משמאל</SelectItem>
+                <SelectItem value="bottom-right">למטה מימין</SelectItem>
+                <SelectItem value="bottom-left">למטה משמאל</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-sm">גודל תמונה</Label>
+              <span className="text-xs font-mono text-muted-foreground">{settings.overlay_size}px</span>
+            </div>
+            <Slider min={5} max={100} step={1} value={[settings.overlay_size]} onValueChange={([v]) => setSettings(s => s ? { ...s, overlay_size: v } : s)} />
+          </div>
         </div>
       </div>
 
@@ -154,37 +210,15 @@ export default function SettingsTab() {
         <div className="space-y-3">
           <div className="space-y-1">
             <Label className="text-sm">קנה מידה (%)</Label>
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={settings.display_scale}
-              onChange={(e) => setSettings(s => s ? { ...s, display_scale: Number(e.target.value) || 100 } : s)}
-              className="h-10 text-sm"
-              min={50}
-              max={100}
-            />
+            <Input type="number" inputMode="numeric" value={settings.display_scale} onChange={(e) => setSettings(s => s ? { ...s, display_scale: Number(e.target.value) || 100 } : s)} className="h-10 text-sm" min={50} max={100} />
           </div>
-
           <div className="space-y-1">
             <Label className="text-sm">הזזה אופקית (פיקסלים)</Label>
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={settings.display_offset_x}
-              onChange={(e) => setSettings(s => s ? { ...s, display_offset_x: Number(e.target.value) || 0 } : s)}
-              className="h-10 text-sm"
-            />
+            <Input type="number" inputMode="numeric" value={settings.display_offset_x} onChange={(e) => setSettings(s => s ? { ...s, display_offset_x: Number(e.target.value) || 0 } : s)} className="h-10 text-sm" />
           </div>
-
           <div className="space-y-1">
             <Label className="text-sm">הזזה אנכית (פיקסלים)</Label>
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={settings.display_offset_y}
-              onChange={(e) => setSettings(s => s ? { ...s, display_offset_y: Number(e.target.value) || 0 } : s)}
-              className="h-10 text-sm"
-            />
+            <Input type="number" inputMode="numeric" value={settings.display_offset_y} onChange={(e) => setSettings(s => s ? { ...s, display_offset_y: Number(e.target.value) || 0 } : s)} className="h-10 text-sm" />
           </div>
         </div>
       </div>
