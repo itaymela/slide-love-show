@@ -55,12 +55,12 @@ export default function DashboardTab() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* TV Status */}
-      <div className="bg-card rounded-xl border border-border p-4">
+      <div className="bg-card rounded-xl border border-border p-5">
         <div className="flex items-center gap-3 mb-3">
           <Monitor className="w-5 h-5 text-primary" />
-          <span className="font-semibold text-sm">סטטוס מסך</span>
+          <span className="font-semibold text-base">סטטוס מסך</span>
           <span className={`mr-auto flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
             isLive ? "bg-accent/15 text-accent" : "bg-destructive/15 text-destructive"
           }`}>
