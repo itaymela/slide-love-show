@@ -99,11 +99,11 @@ export default function DashboardTab() {
       </div>
 
       {/* Manual Override */}
-      <div className="bg-card rounded-xl border border-border p-4">
+      <div className="bg-card rounded-xl border border-border p-5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            {manualOverride ? <ShieldOff className="w-4 h-4 text-destructive" /> : <Shield className="w-4 h-4 text-accent" />}
-            <Label className="text-sm font-medium">עקיפה ידנית</Label>
+            {manualOverride ? <ShieldOff className="w-5 h-5 text-destructive" /> : <Shield className="w-5 h-5 text-accent" />}
+            <Label className="text-base font-medium">עקיפה ידנית</Label>
           </div>
           <Switch checked={manualOverride} onCheckedChange={toggleOverride} />
         </div>

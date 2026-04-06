@@ -97,7 +97,7 @@ export default function BirthdaySettings() {
             רענון ידני
           </Button>
           {status === "success" && (
-            <span className="text-xs text-green-600">✓ {names.length} שמות נמצאו</span>
+            <span className="text-xs text-accent">✓ {names.length} שמות נמצאו</span>
           )}
           {status === "error" && (
             <span className="text-xs text-destructive">✗ שגיאה במשיכת נתונים</span>
