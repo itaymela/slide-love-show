@@ -1,28 +1,24 @@
 import { useState } from "react";
-import { Monitor, LayoutDashboard, ListMusic, Zap, Settings, Lock } from "lucide-react";
-import DashboardTab from "@/components/admin/DashboardTab";
-import PlaylistsTab from "@/components/admin/PlaylistsTab";
-import AutomationTab from "@/components/admin/AutomationTab";
-import SettingsTab from "@/components/admin/SettingsTab";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Monitor, LayoutDashboard, ListMusic, Zap, Settings, Lock, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const ADMIN_PIN = "8888";
 
 const tabs = [
-  { id: "dashboard", label: "לוח בקרה", icon: LayoutDashboard },
-  { id: "playlists", label: "פלייליסטים", icon: ListMusic },
-  { id: "automation", label: "אוטומציה", icon: Zap },
-  { id: "settings", label: "הגדרות", icon: Settings },
+  { id: "dashboard", path: "/admin", label: "בקרה", icon: LayoutDashboard },
+  { id: "playlists", path: "/admin/playlists", label: "פלייליסטים", icon: ListMusic },
+  { id: "automation", path: "/admin/automation", label: "אוטומציה", icon: Zap },
+  { id: "settings", path: "/admin/settings", label: "הגדרות", icon: Settings },
 ] as const;
 
-type TabId = typeof tabs[number]["id"];
-
-const AdminPanel = () => {
-  const [activeTab, setActiveTab] = useState<TabId>("dashboard");
+export default function AdminLayout() {
   const [isUnlocked, setIsUnlocked] = useState(() => sessionStorage.getItem("admin_unlocked") === "true");
   const [pin, setPin] = useState("");
   const [pinError, setPinError] = useState(false);
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const handlePinSubmit = () => {
     if (pin === ADMIN_PIN) {
@@ -66,12 +62,30 @@ const AdminPanel = () => {
     );
   }
 
+  // Determine active tab
+  const getActiveTab = () => {
+    if (location.pathname.startsWith("/admin/settings")) return "settings";
+    if (location.pathname.startsWith("/admin/playlists")) return "playlists";
+    if (location.pathname.startsWith("/admin/automation")) return "automation";
+    return "dashboard";
+  };
+
+  const activeTab = getActiveTab();
+
+  // Check if we're in a sub-page (for back navigation in header)
+  const isSubPage = location.pathname.split("/").length > 3; // e.g. /admin/settings/ticker
+
   return (
     <div dir="rtl" className="min-h-screen bg-background pb-20">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card/80 backdrop-blur-xl border-b border-border px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
+            {isSubPage && (
+              <button onClick={() => navigate(-1)} className="p-1 -mr-1">
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
+              </button>
+            )}
             <Monitor className="w-5 h-5 text-primary" />
             <h1 className="text-lg font-bold tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
               ניהול שילוט
@@ -84,31 +98,28 @@ const AdminPanel = () => {
       </header>
 
       {/* Content */}
-      <div className="px-4 py-4">
-        {activeTab === "dashboard" && <DashboardTab />}
-        {activeTab === "playlists" && <PlaylistsTab />}
-        {activeTab === "automation" && <AutomationTab />}
-        {activeTab === "settings" && <SettingsTab />}
+      <div className="px-4 py-5">
+        <Outlet />
       </div>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border">
-        <div className="flex items-center justify-around h-14">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-xl border-t border-border safe-area-bottom">
+        <div className="flex items-center justify-around h-16">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg transition-colors ${
+                onClick={() => navigate(tab.path)}
+                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-colors min-w-[64px] ${
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-[10px] font-medium">{tab.label}</span>
+                <span className="text-[11px] font-medium">{tab.label}</span>
               </button>
             );
           })}
@@ -116,6 +127,4 @@ const AdminPanel = () => {
       </nav>
     </div>
   );
-};
-
-export default AdminPanel;
+}
