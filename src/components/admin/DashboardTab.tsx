@@ -83,10 +83,10 @@ export default function DashboardTab() {
       </div>
 
       {/* Now Playing */}
-      <div className="bg-card rounded-xl border border-border p-4">
+      <div className="bg-card rounded-xl border border-border p-5">
         <div className="flex items-center gap-2 mb-2">
-          <Zap className="w-4 h-4 text-primary" />
-          <span className="font-semibold text-sm">מוצג כעת</span>
+          <Zap className="w-5 h-5 text-primary" />
+          <span className="font-semibold text-base">מוצג כעת</span>
         </div>
         {activePlaylist ? (
           <p className="text-sm text-muted-foreground">
