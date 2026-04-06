@@ -16,6 +16,7 @@ import TickerSettings from "./pages/admin/TickerSettings";
 import BirthdaySettings from "./pages/admin/BirthdaySettings";
 import OverlaySettings from "./pages/admin/OverlaySettings";
 import CalibrationSettings from "./pages/admin/CalibrationSettings";
+import PlaylistDetail from "./pages/admin/PlaylistDetail";
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const App = () => (
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<DashboardTab />} />
             <Route path="playlists" element={<PlaylistsTab />} />
+            <Route path="playlists/:id" element={<PlaylistDetail />} />
             <Route path="automation" element={<AutomationTab />} />
             <Route path="settings" element={<SettingsHub />} />
             <Route path="settings/transitions" element={<TransitionsSettings />} />
