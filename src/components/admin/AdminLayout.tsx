@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 const ADMIN_PIN = "8888";
 
 const tabs = [
-  { id: "dashboard", path: "/admin", label: "בקרה", icon: LayoutDashboard },
   { id: "playlists", path: "/admin/playlists", label: "פלייליסטים", icon: ListMusic },
   { id: "automation", path: "/admin/automation", label: "אוטומציה", icon: Zap },
   { id: "settings", path: "/admin/settings", label: "הגדרות", icon: Settings },
