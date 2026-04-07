@@ -78,6 +78,20 @@ export default function AutomationTab() {
 
   return (
     <div className="space-y-5">
+      {/* Manual Override */}
+      <div className="bg-card rounded-xl border border-border p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {manualOverride ? <ShieldOff className="w-5 h-5 text-destructive" /> : <Shield className="w-5 h-5 text-accent" />}
+            <Label className="text-base font-medium">עקיפה ידנית</Label>
+          </div>
+          <Switch checked={manualOverride} onCheckedChange={toggleOverride} />
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {manualOverride ? "האוטומציה מושהית. מאקרואים לא יופעלו." : "האוטומציה פעילה. מאקרואים יופעלו."}
+        </p>
+      </div>
+
       <div className="bg-card rounded-xl border border-border p-4 space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <Clock className="w-4 h-4 text-primary" />

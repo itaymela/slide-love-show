@@ -29,7 +29,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/display" element={<DisplayPanel />} />
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<DashboardTab />} />
+            <Route index element={<Navigate to="/admin/playlists" replace />} />
             <Route path="playlists" element={<PlaylistsTab />} />
             <Route path="playlists/:id" element={<PlaylistDetail />} />
             <Route path="automation" element={<AutomationTab />} />

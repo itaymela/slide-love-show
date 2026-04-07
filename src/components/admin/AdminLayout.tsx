@@ -64,9 +64,8 @@ export default function AdminLayout() {
   // Determine active tab
   const getActiveTab = () => {
     if (location.pathname.startsWith("/admin/settings")) return "settings";
-    if (location.pathname.startsWith("/admin/playlists")) return "playlists";
     if (location.pathname.startsWith("/admin/automation")) return "automation";
-    return "dashboard";
+    return "playlists";
   };
 
   const activeTab = getActiveTab();
