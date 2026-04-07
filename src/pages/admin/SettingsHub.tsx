@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Type, Image, Monitor, Cake } from "lucide-react";
+import { Sparkles, Type, Image, Monitor, Cake, ImageIcon } from "lucide-react";
 
 const settingsCards = [
   {
