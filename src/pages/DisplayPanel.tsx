@@ -80,6 +80,8 @@ const DisplayPanel = () => {
         birthday_enabled: raw.birthday_enabled ?? false,
         overlay_position: raw.overlay_position || "top-right",
         overlay_size: raw.overlay_size ?? 50,
+        single_image_url: raw.single_image_url || "",
+        single_image_active: raw.single_image_active ?? false,
       };
       setSettings(s);
       settingsRef.current = s;
