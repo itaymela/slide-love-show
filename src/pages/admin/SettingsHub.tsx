@@ -3,6 +3,12 @@ import { Sparkles, Type, Image, Monitor, Cake, ImageIcon } from "lucide-react";
 
 const settingsCards = [
   {
+    icon: ImageIcon,
+    label: "תמונה בודדת",
+    description: "הצגת תמונה קבועה על כל המסך במקום פלייליסט",
+    path: "/admin/settings/single-image",
+  },
+  {
     icon: Sparkles,
     label: "סגנון מעבר",
     description: "סוג ומהירות אנימציית המעבר בין שקפים",

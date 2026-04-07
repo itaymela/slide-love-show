@@ -295,6 +295,17 @@ const DisplayPanel = () => {
     "bottom-left": { bottom: settings.ticker_enabled ? tickerHeight + 12 : 12, left: 12 },
   };
 
+  // Single image mode
+  if (settings.single_image_active && settings.single_image_url) {
+    return (
+      <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: "hsl(0 0% 0%)", cursor: "none" }}>
+        <div style={{ width: "100%", height: "100%", transform: calibrationTransform, transformOrigin: "center center" }}>
+          <img src={settings.single_image_url} alt="" className="w-full h-full object-contain" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: "hsl(0 0% 0%)", cursor: "none" }}>
       <div

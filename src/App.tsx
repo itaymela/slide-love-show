@@ -40,6 +40,7 @@ const App = () => (
             <Route path="settings/birthdays" element={<BirthdaySettings />} />
             <Route path="settings/overlay" element={<OverlaySettings />} />
             <Route path="settings/calibration" element={<CalibrationSettings />} />
+            <Route path="settings/single-image" element={<SingleImageSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
