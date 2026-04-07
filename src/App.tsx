@@ -7,7 +7,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import DisplayPanel from "./pages/DisplayPanel";
 import AdminLayout from "./components/admin/AdminLayout";
-import DashboardTab from "./components/admin/DashboardTab";
 import PlaylistsTab from "./components/admin/PlaylistsTab";
 import AutomationTab from "./components/admin/AutomationTab";
 import SettingsHub from "./pages/admin/SettingsHub";
