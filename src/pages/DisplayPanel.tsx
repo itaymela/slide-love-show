@@ -26,6 +26,8 @@ type DisplaySettings = {
   overlay_size: number;
   birthday_sheet_url: string;
   birthday_enabled: boolean;
+  single_image_url: string;
+  single_image_active: boolean;
 };
 
 const DisplayPanel = () => {
@@ -40,6 +42,7 @@ const DisplayPanel = () => {
     display_scale: 100, display_offset_x: 0, display_offset_y: 0,
     overlay_url: "", overlay_position: "top-right", overlay_size: 50,
     birthday_sheet_url: "", birthday_enabled: false,
+    single_image_url: "", single_image_active: false,
   });
   const [birthdayNames, setBirthdayNames] = useState<string[]>([]);
   const birthdayIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -77,6 +80,8 @@ const DisplayPanel = () => {
         birthday_enabled: raw.birthday_enabled ?? false,
         overlay_position: raw.overlay_position || "top-right",
         overlay_size: raw.overlay_size ?? 50,
+        single_image_url: raw.single_image_url || "",
+        single_image_active: raw.single_image_active ?? false,
       };
       setSettings(s);
       settingsRef.current = s;
@@ -289,6 +294,17 @@ const DisplayPanel = () => {
     "bottom-right": { bottom: settings.ticker_enabled ? tickerHeight + 12 : 12, right: 12 },
     "bottom-left": { bottom: settings.ticker_enabled ? tickerHeight + 12 : 12, left: 12 },
   };
+
+  // Single image mode
+  if (settings.single_image_active && settings.single_image_url) {
+    return (
+      <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: "hsl(0 0% 0%)", cursor: "none" }}>
+        <div style={{ width: "100%", height: "100%", transform: calibrationTransform, transformOrigin: "center center" }}>
+          <img src={settings.single_image_url} alt="" className="w-full h-full object-contain" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: "hsl(0 0% 0%)", cursor: "none" }}>
