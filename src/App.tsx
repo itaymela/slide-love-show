@@ -15,6 +15,7 @@ import TickerSettings from "./pages/admin/TickerSettings";
 import BirthdaySettings from "./pages/admin/BirthdaySettings";
 import OverlaySettings from "./pages/admin/OverlaySettings";
 import CalibrationSettings from "./pages/admin/CalibrationSettings";
+import SingleImageSettings from "./pages/admin/SingleImageSettings";
 import PlaylistDetail from "./pages/admin/PlaylistDetail";
 
 const queryClient = new QueryClient();
