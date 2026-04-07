@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Monitor, LayoutDashboard, ListMusic, Zap, Settings, Lock, ChevronRight } from "lucide-react";
+import { Monitor, ListMusic, Zap, Settings, Lock, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
