@@ -19,6 +19,7 @@ export default function AutomationTab() {
   const [newTime, setNewTime] = useState("08:00");
   const [newDate, setNewDate] = useState("");
   const [newTargetId, setNewTargetId] = useState("");
+  const [manualOverride, setManualOverride] = useState(false);
 
   const fetchData = useCallback(async () => {
     const [{ data: m }, { data: p }] = await Promise.all([
