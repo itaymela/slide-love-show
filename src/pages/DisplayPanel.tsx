@@ -42,6 +42,7 @@ const DisplayPanel = () => {
     display_scale: 100, display_offset_x: 0, display_offset_y: 0,
     overlay_url: "", overlay_position: "top-right", overlay_size: 50,
     birthday_sheet_url: "", birthday_enabled: false,
+    single_image_url: "", single_image_active: false,
   });
   const [birthdayNames, setBirthdayNames] = useState<string[]>([]);
   const birthdayIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
