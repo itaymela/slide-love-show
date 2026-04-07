@@ -22,15 +22,17 @@ export default function AutomationTab() {
   const [manualOverride, setManualOverride] = useState(false);
 
   const fetchData = useCallback(async () => {
-    const [{ data: m }, { data: p }] = await Promise.all([
+    const [{ data: m }, { data: p }, { data: s }] = await Promise.all([
       supabase.from("macros").select("*").order("trigger_time", { ascending: true }),
       supabase.from("playlists").select("*").order("created_at", { ascending: true }),
+      supabase.from("settings").select("manual_override").limit(1),
     ]);
     if (m) setMacros(m as Macro[]);
     if (p) {
       setPlaylists(p);
       if (!newTargetId && p.length > 0) setNewTargetId(p[0].id);
     }
+    if (s?.[0]) setManualOverride(s[0].manual_override);
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
