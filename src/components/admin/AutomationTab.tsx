@@ -59,6 +59,15 @@ export default function AutomationTab() {
     setMacros(prev => prev.map(m => m.id === id ? { ...m, is_enabled: enabled } : m));
   };
 
+  const toggleOverride = async (val: boolean) => {
+    setManualOverride(val);
+    const { data: rows } = await supabase.from("settings").select("id").limit(1);
+    if (rows?.[0]) {
+      await supabase.from("settings").update({ manual_override: val }).eq("id", rows[0].id);
+    }
+    toast.success(val ? "האוטומציה הושהתה" : "האוטומציה חודשה");
+  };
+
   const getPlaylistName = (id: string) => playlists.find(p => p.id === id)?.name || "לא ידוע";
 
   const formatDate = (dateStr: string | null) => {
