@@ -1,13 +1,12 @@
 import { useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Monitor, LayoutDashboard, ListMusic, Zap, Settings, Lock, ChevronRight } from "lucide-react";
+import { Monitor, ListMusic, Zap, Settings, Lock, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const ADMIN_PIN = "8888";
 
 const tabs = [
-  { id: "dashboard", path: "/admin", label: "בקרה", icon: LayoutDashboard },
   { id: "playlists", path: "/admin/playlists", label: "פלייליסטים", icon: ListMusic },
   { id: "automation", path: "/admin/automation", label: "אוטומציה", icon: Zap },
   { id: "settings", path: "/admin/settings", label: "הגדרות", icon: Settings },
@@ -65,9 +64,8 @@ export default function AdminLayout() {
   // Determine active tab
   const getActiveTab = () => {
     if (location.pathname.startsWith("/admin/settings")) return "settings";
-    if (location.pathname.startsWith("/admin/playlists")) return "playlists";
     if (location.pathname.startsWith("/admin/automation")) return "automation";
-    return "dashboard";
+    return "playlists";
   };
 
   const activeTab = getActiveTab();

@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { Plus, Trash2, Clock, Zap, CalendarDays } from "lucide-react";
+import { Plus, Trash2, Clock, Zap, CalendarDays, ShieldOff, Shield } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -18,17 +19,20 @@ export default function AutomationTab() {
   const [newTime, setNewTime] = useState("08:00");
   const [newDate, setNewDate] = useState("");
   const [newTargetId, setNewTargetId] = useState("");
+  const [manualOverride, setManualOverride] = useState(false);
 
   const fetchData = useCallback(async () => {
-    const [{ data: m }, { data: p }] = await Promise.all([
+    const [{ data: m }, { data: p }, { data: s }] = await Promise.all([
       supabase.from("macros").select("*").order("trigger_time", { ascending: true }),
       supabase.from("playlists").select("*").order("created_at", { ascending: true }),
+      supabase.from("settings").select("manual_override").limit(1),
     ]);
     if (m) setMacros(m as Macro[]);
     if (p) {
       setPlaylists(p);
       if (!newTargetId && p.length > 0) setNewTargetId(p[0].id);
     }
+    if (s?.[0]) setManualOverride(s[0].manual_override);
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -55,6 +59,15 @@ export default function AutomationTab() {
     setMacros(prev => prev.map(m => m.id === id ? { ...m, is_enabled: enabled } : m));
   };
 
+  const toggleOverride = async (val: boolean) => {
+    setManualOverride(val);
+    const { data: rows } = await supabase.from("settings").select("id").limit(1);
+    if (rows?.[0]) {
+      await supabase.from("settings").update({ manual_override: val }).eq("id", rows[0].id);
+    }
+    toast.success(val ? "האוטומציה הושהתה" : "האוטומציה חודשה");
+  };
+
   const getPlaylistName = (id: string) => playlists.find(p => p.id === id)?.name || "לא ידוע";
 
   const formatDate = (dateStr: string | null) => {
@@ -65,6 +78,20 @@ export default function AutomationTab() {
 
   return (
     <div className="space-y-5">
+      {/* Manual Override */}
+      <div className="bg-card rounded-xl border border-border p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {manualOverride ? <ShieldOff className="w-5 h-5 text-destructive" /> : <Shield className="w-5 h-5 text-accent" />}
+            <Label className="text-base font-medium">עקיפה ידנית</Label>
+          </div>
+          <Switch checked={manualOverride} onCheckedChange={toggleOverride} />
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">
+          {manualOverride ? "האוטומציה מושהית. מאקרואים לא יופעלו." : "האוטומציה פעילה. מאקרואים יופעלו."}
+        </p>
+      </div>
+
       <div className="bg-card rounded-xl border border-border p-4 space-y-4">
         <div className="flex items-center gap-2 mb-1">
           <Clock className="w-4 h-4 text-primary" />

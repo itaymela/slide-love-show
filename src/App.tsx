@@ -7,7 +7,6 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import DisplayPanel from "./pages/DisplayPanel";
 import AdminLayout from "./components/admin/AdminLayout";
-import DashboardTab from "./components/admin/DashboardTab";
 import PlaylistsTab from "./components/admin/PlaylistsTab";
 import AutomationTab from "./components/admin/AutomationTab";
 import SettingsHub from "./pages/admin/SettingsHub";
@@ -30,7 +29,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/display" element={<DisplayPanel />} />
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<DashboardTab />} />
+            <Route index element={<Navigate to="/admin/playlists" replace />} />
             <Route path="playlists" element={<PlaylistsTab />} />
             <Route path="playlists/:id" element={<PlaylistDetail />} />
             <Route path="automation" element={<AutomationTab />} />
