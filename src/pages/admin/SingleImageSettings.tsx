@@ -76,7 +76,7 @@ export default function SingleImageSettings() {
           כאשר פעיל, התמונה תוצג על כל המסך ותחליף את הפלייליסט הפעיל.
         </p>
         {!imageUrl && active === false && (
-          <p className="text-xs text-amber-500 mt-1">יש להעלות תמונה לפני ההפעלה.</p>
+          <p className="text-xs text-destructive mt-1">יש להעלות תמונה לפני ההפעלה.</p>
         )}
       </div>
 
