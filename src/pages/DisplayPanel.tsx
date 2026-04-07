@@ -26,6 +26,8 @@ type DisplaySettings = {
   overlay_size: number;
   birthday_sheet_url: string;
   birthday_enabled: boolean;
+  single_image_url: string;
+  single_image_active: boolean;
 };
 
 const DisplayPanel = () => {
