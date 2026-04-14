@@ -101,8 +101,11 @@ export type Database = {
           display_offset_x: number
           display_offset_y: number
           display_scale: number
+          global_object_fit: string
           id: string
           manual_override: boolean
+          overlay_offset_x: number
+          overlay_offset_y: number
           overlay_position: string
           overlay_size: number
           overlay_url: string
@@ -110,6 +113,7 @@ export type Database = {
           single_image_url: string
           ticker_enabled: boolean
           ticker_font_size: number
+          ticker_offset_y: number
           ticker_speed: number
           ticker_text: string
           transition_duration: number
@@ -122,8 +126,11 @@ export type Database = {
           display_offset_x?: number
           display_offset_y?: number
           display_scale?: number
+          global_object_fit?: string
           id?: string
           manual_override?: boolean
+          overlay_offset_x?: number
+          overlay_offset_y?: number
           overlay_position?: string
           overlay_size?: number
           overlay_url?: string
@@ -131,6 +138,7 @@ export type Database = {
           single_image_url?: string
           ticker_enabled?: boolean
           ticker_font_size?: number
+          ticker_offset_y?: number
           ticker_speed?: number
           ticker_text?: string
           transition_duration?: number
@@ -143,8 +151,11 @@ export type Database = {
           display_offset_x?: number
           display_offset_y?: number
           display_scale?: number
+          global_object_fit?: string
           id?: string
           manual_override?: boolean
+          overlay_offset_x?: number
+          overlay_offset_y?: number
           overlay_position?: string
           overlay_size?: number
           overlay_url?: string
@@ -152,6 +163,7 @@ export type Database = {
           single_image_url?: string
           ticker_enabled?: boolean
           ticker_font_size?: number
+          ticker_offset_y?: number
           ticker_speed?: number
           ticker_text?: string
           transition_duration?: number

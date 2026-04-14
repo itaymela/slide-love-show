@@ -9,7 +9,6 @@ import {
   Image as ImageIcon, Check, Film, Pencil, Copy,
   MoreVertical, ArrowRightLeft,
 } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -32,7 +31,7 @@ function getVideoDuration(file: File): Promise<number> {
   return new Promise((resolve) => {
     const video = document.createElement("video");
     video.preload = "metadata";
-    video.onloadedmetadata = () => { window.URL.revokeObjectURL(video.src); resolve(Math.ceil(video.duration)); };
+    video.onloadedmetadata = () => { window.URL.revokeObjectURL(video.src); resolve(Math.round(video.duration * 10) / 10); };
     video.onerror = () => resolve(5);
     video.src = URL.createObjectURL(file);
   });
@@ -46,7 +45,6 @@ export default function PlaylistDetail() {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [globalObjectFit, setGlobalObjectFit] = useState<"contain" | "cover">("contain");
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameValue, setRenameValue] = useState("");
 
@@ -59,10 +57,7 @@ export default function PlaylistDetail() {
     ]);
     if (plData) setPlaylist(plData);
     if (allPl) setAllPlaylists(allPl);
-    if (slData) {
-      setSlides(slData);
-      if (slData.length > 0) setGlobalObjectFit(slData[0].object_fit as "contain" | "cover");
-    }
+    if (slData) setSlides(slData);
   }, [id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -77,10 +72,7 @@ export default function PlaylistDetail() {
   };
 
   const openRename = () => {
-    if (playlist) {
-      setRenameValue(playlist.name);
-      setRenameDialogOpen(true);
-    }
+    if (playlist) { setRenameValue(playlist.name); setRenameDialogOpen(true); }
   };
 
   const confirmRename = async () => {
@@ -127,9 +119,9 @@ export default function PlaylistDetail() {
         const { error: uploadError } = await supabase.storage.from("images").upload(fileName, file);
         if (uploadError) { toast.error(`העלאה נכשלה: ${file.name}`); continue; }
         const { data: urlData } = supabase.storage.from("images").getPublicUrl(fileName);
-        let duration = 5;
+        let duration: number = 5;
         if (mediaType === "video") duration = await getVideoDuration(file);
-        const { data, error } = await supabase.from("slides").insert({ image_url: urlData.publicUrl, duration, sort_order: slides.length + 1, object_fit: globalObjectFit, playlist_id: id, media_type: mediaType }).select().single();
+        const { data, error } = await supabase.from("slides").insert({ image_url: urlData.publicUrl, duration, sort_order: slides.length + 1, object_fit: "contain", playlist_id: id, media_type: mediaType }).select().single();
         if (error) toast.error("שגיאה בשמירה");
         else if (data) setSlides(prev => [...prev, data]);
       }
@@ -179,7 +171,7 @@ export default function PlaylistDetail() {
     setSaving(true);
     try {
       for (const [i, s] of slides.entries()) {
-        const { error } = await supabase.from("slides").update({ duration: s.duration, sort_order: i, object_fit: globalObjectFit }).eq("id", s.id);
+        const { error } = await supabase.from("slides").update({ duration: s.duration, sort_order: i }).eq("id", s.id);
         if (error) throw error;
       }
       toast.success("סונכרן לתצוגה!");
@@ -204,29 +196,16 @@ export default function PlaylistDetail() {
         </div>
 
         <div className="flex flex-col gap-3">
-          <Button
-            variant={playlist.is_active ? "secondary" : "default"}
-            disabled={playlist.is_active}
-            onClick={setActive}
-            className="w-full h-12 text-base gap-2"
-          >
+          <Button variant={playlist.is_active ? "secondary" : "default"} disabled={playlist.is_active} onClick={setActive} className="w-full h-12 text-base gap-2">
             <Check className="w-5 h-5" />
             {playlist.is_active ? "פלייליסט פעיל" : "הפעל פלייליסט זה"}
           </Button>
-
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1 h-11 gap-2" onClick={openRename}>
-              <Pencil className="w-4 h-4" /> שינוי שם
-            </Button>
-            <Button variant="outline" className="flex-1 h-11 gap-2" onClick={duplicatePlaylist}>
-              <Copy className="w-4 h-4" /> שכפול
-            </Button>
+            <Button variant="outline" className="flex-1 h-11 gap-2" onClick={openRename}><Pencil className="w-4 h-4" /> שינוי שם</Button>
+            <Button variant="outline" className="flex-1 h-11 gap-2" onClick={duplicatePlaylist}><Copy className="w-4 h-4" /> שכפול</Button>
           </div>
-
           {!playlist.is_active && (
-            <Button variant="ghost" className="w-full h-11 text-destructive hover:text-destructive gap-2" onClick={deletePlaylist}>
-              <Trash2 className="w-4 h-4" /> מחק פלייליסט
-            </Button>
+            <Button variant="ghost" className="w-full h-11 text-destructive hover:text-destructive gap-2" onClick={deletePlaylist}><Trash2 className="w-4 h-4" /> מחק פלייליסט</Button>
           )}
         </div>
       </div>
@@ -237,18 +216,6 @@ export default function PlaylistDetail() {
         <span className="text-[10px] text-muted-foreground">JPG, PNG, MP4, WEBM</span>
         <input type="file" accept="image/*,video/mp4,video/webm,video/ogg" multiple onChange={handleUpload} disabled={uploading} className="hidden" />
       </label>
-
-      <div className="flex items-center justify-between bg-card rounded-xl p-4 border border-border">
-        <div className="flex items-center gap-2">
-          <ImageIcon className="w-4 h-4 text-muted-foreground" />
-          <Label className="text-sm font-medium">סקילת מדיה</Label>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">התאם</span>
-          <Switch checked={globalObjectFit === "cover"} onCheckedChange={(checked) => setGlobalObjectFit(checked ? "cover" : "contain")} />
-          <span className="text-xs text-muted-foreground">מלא</span>
-        </div>
-      </div>
 
       {slides.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
@@ -277,7 +244,16 @@ export default function PlaylistDetail() {
 
                 <div className="flex-1 flex flex-col justify-between min-w-0">
                   <div className="flex items-center gap-2">
-                    <Input type="number" inputMode="numeric" min={1} max={300} value={slide.duration} onChange={(e) => updateDuration(index, parseInt(e.target.value) || 5)} className="h-9 w-20 text-center text-sm font-semibold" />
+                    <Input
+                      type="number"
+                      inputMode="decimal"
+                      step="0.1"
+                      min={0.1}
+                      max={300}
+                      value={slide.duration}
+                      onChange={(e) => updateDuration(index, parseFloat(e.target.value) || 5)}
+                      className="h-9 w-20 text-center text-sm font-semibold"
+                    />
                     <span className="text-xs text-muted-foreground">שניות</span>
                   </div>
                   <div className="flex items-center gap-1">

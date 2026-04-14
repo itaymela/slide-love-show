@@ -17,6 +17,7 @@ type DisplaySettings = {
   transition_type: string;
   ticker_font_size: number;
   ticker_speed: number;
+  ticker_offset_y: number;
   transition_duration: number;
   display_scale: number;
   display_offset_x: number;
@@ -24,27 +25,68 @@ type DisplaySettings = {
   overlay_url: string;
   overlay_position: string;
   overlay_size: number;
+  overlay_offset_x: number;
+  overlay_offset_y: number;
   birthday_sheet_url: string;
   birthday_enabled: boolean;
   single_image_url: string;
   single_image_active: boolean;
+  global_object_fit: string;
 };
+
+const defaultSettings: DisplaySettings = {
+  ticker_text: "", ticker_enabled: false, transition_type: "fade",
+  ticker_font_size: 14, ticker_speed: 30, ticker_offset_y: 0, transition_duration: 0.5,
+  display_scale: 100, display_offset_x: 0, display_offset_y: 0,
+  overlay_url: "", overlay_position: "top-right", overlay_size: 50,
+  overlay_offset_x: 0, overlay_offset_y: 0,
+  birthday_sheet_url: "", birthday_enabled: false,
+  single_image_url: "", single_image_active: false,
+  global_object_fit: "contain",
+};
+
+const LoadingScreen = () => (
+  <div className="fixed inset-0 flex items-center justify-center" style={{ backgroundColor: "hsl(0 0% 0%)" }}>
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-12 h-12 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+      <p className="text-white/60 text-sm">טוען תוכן...</p>
+    </div>
+  </div>
+);
+
+function preloadMedia(slides: Slide[]): Promise<void> {
+  if (slides.length === 0) return Promise.resolve();
+  return new Promise((resolve) => {
+    let loaded = 0;
+    const total = slides.length;
+    const done = () => { loaded++; if (loaded >= total) resolve(); };
+    slides.forEach((slide) => {
+      if (slide.media_type === "video") {
+        const v = document.createElement("video");
+        v.preload = "auto";
+        v.oncanplaythrough = done;
+        v.onerror = done;
+        v.src = slide.image_url;
+      } else {
+        const img = new window.Image();
+        img.onload = done;
+        img.onerror = done;
+        img.src = slide.image_url;
+      }
+    });
+    // Safety timeout
+    setTimeout(resolve, 15000);
+  });
+}
 
 const DisplayPanel = () => {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [activeLayer, setActiveLayer] = useState<"A" | "B">("A");
   const [slideA, setSlideA] = useState<Slide | null>(null);
   const [slideB, setSlideB] = useState<Slide | null>(null);
-  const [objectFit, setObjectFit] = useState<"contain" | "cover">("contain");
-  const [settings, setSettings] = useState<DisplaySettings>({
-    ticker_text: "", ticker_enabled: false, transition_type: "fade",
-    ticker_font_size: 14, ticker_speed: 30, transition_duration: 0.5,
-    display_scale: 100, display_offset_x: 0, display_offset_y: 0,
-    overlay_url: "", overlay_position: "top-right", overlay_size: 50,
-    birthday_sheet_url: "", birthday_enabled: false,
-    single_image_url: "", single_image_active: false,
-  });
+  const [settings, setSettings] = useState<DisplaySettings>(defaultSettings);
   const [birthdayNames, setBirthdayNames] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const birthdayIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const slidesRef = useRef<Slide[]>([]);
@@ -71,6 +113,7 @@ const DisplayPanel = () => {
         transition_type: raw.transition_type || "fade",
         ticker_font_size: raw.ticker_font_size ?? 14,
         ticker_speed: raw.ticker_speed ?? 30,
+        ticker_offset_y: raw.ticker_offset_y ?? 0,
         transition_duration: raw.transition_duration ?? 0.5,
         display_scale: raw.display_scale ?? 100,
         display_offset_x: raw.display_offset_x ?? 0,
@@ -80,8 +123,11 @@ const DisplayPanel = () => {
         birthday_enabled: raw.birthday_enabled ?? false,
         overlay_position: raw.overlay_position || "top-right",
         overlay_size: raw.overlay_size ?? 50,
+        overlay_offset_x: raw.overlay_offset_x ?? 0,
+        overlay_offset_y: raw.overlay_offset_y ?? 0,
         single_image_url: raw.single_image_url || "",
         single_image_active: raw.single_image_active ?? false,
+        global_object_fit: raw.global_object_fit || "contain",
       };
       setSettings(s);
       settingsRef.current = s;
@@ -91,13 +137,19 @@ const DisplayPanel = () => {
   const fetchActiveSlides = useCallback(async () => {
     const { data: playlists } = await supabase.from("playlists").select("id").eq("is_active", true).limit(1);
     const activeId = playlists?.[0]?.id;
-    if (!activeId) { slidesRef.current = []; setSlides([]); return; }
+    if (!activeId) { slidesRef.current = []; setSlides([]); setLoading(false); return; }
     const { data } = await supabase.from("slides").select("*").eq("playlist_id", activeId).order("sort_order", { ascending: true });
     if (data && data.length > 0) {
+      setLoading(true);
+      await preloadMedia(data);
       slidesRef.current = data;
       setSlides(data);
-      setObjectFit(data[0].object_fit as "contain" | "cover");
-    } else { slidesRef.current = []; setSlides([]); }
+      setLoading(false);
+    } else {
+      slidesRef.current = [];
+      setSlides([]);
+      setLoading(false);
+    }
   }, []);
 
   const fetchBirthdays = useCallback(async () => {
@@ -123,17 +175,13 @@ const DisplayPanel = () => {
 
   useEffect(() => { fetchActiveSlides(); fetchSettings(); }, [fetchActiveSlides, fetchSettings]);
 
-  // Fetch birthdays on load and every hour
   useEffect(() => {
     fetchBirthdays();
     birthdayIntervalRef.current = setInterval(fetchBirthdays, 3600000);
     return () => { if (birthdayIntervalRef.current) clearInterval(birthdayIntervalRef.current); };
   }, [fetchBirthdays]);
 
-  // Re-fetch birthdays when settings change
-  useEffect(() => {
-    fetchBirthdays();
-  }, [settings.birthday_enabled, settings.birthday_sheet_url, fetchBirthdays]);
+  useEffect(() => { fetchBirthdays(); }, [settings.birthday_enabled, settings.birthday_sheet_url, fetchBirthdays]);
 
   useEffect(() => {
     const channel = supabase
@@ -247,7 +295,7 @@ const DisplayPanel = () => {
     return () => clearTimer();
   }, [slides, scheduleAdvance]);
 
-  const fitClass = objectFit === "cover" ? "object-cover" : "object-contain";
+  const fitClass = settings.global_object_fit === "cover" ? "object-cover" : "object-contain";
   const isFade = settings.transition_type === "fade";
   const transitionDur = isFade ? `${settings.transition_duration}s` : "0s";
 
@@ -278,7 +326,7 @@ const DisplayPanel = () => {
     : "";
 
   const tickerParts = [customTickerPart, birthdayPart].filter(Boolean);
-  const tickerDisplayText = tickerParts.join(" ● ") + " ● ";
+  const tickerDisplayText = tickerParts.length > 0 ? tickerParts.join(" ● ") + " ● " : "";
 
   const tickerHeight = settings.ticker_font_size + 16;
 
@@ -287,20 +335,25 @@ const DisplayPanel = () => {
   const offsetY = settings.display_offset_y || 0;
   const calibrationTransform = `scale(${scaleFactor}) translate(${offsetX}px, ${offsetY}px)`;
 
-  // Overlay position styles
+  // Overlay position styles with custom offsets
+  const oX = settings.overlay_offset_x || 0;
+  const oY = settings.overlay_offset_y || 0;
   const overlayPositionStyles: Record<string, React.CSSProperties> = {
-    "top-right": { top: 12, right: 12 },
-    "top-left": { top: 12, left: 12 },
-    "bottom-right": { bottom: settings.ticker_enabled ? tickerHeight + 12 : 12, right: 12 },
-    "bottom-left": { bottom: settings.ticker_enabled ? tickerHeight + 12 : 12, left: 12 },
+    "top-right": { top: 12 + oY, right: 12 - oX },
+    "top-left": { top: 12 + oY, left: 12 + oX },
+    "bottom-right": { bottom: (settings.ticker_enabled ? tickerHeight + 12 : 12) - oY, right: 12 - oX },
+    "bottom-left": { bottom: (settings.ticker_enabled ? tickerHeight + 12 : 12) - oY, left: 12 + oX },
   };
+
+  // Loading state
+  if (loading) return <LoadingScreen />;
 
   // Single image mode
   if (settings.single_image_active && settings.single_image_url) {
     return (
       <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: "hsl(0 0% 0%)", cursor: "none" }}>
         <div style={{ width: "100%", height: "100%", transform: calibrationTransform, transformOrigin: "center center" }}>
-          <img src={settings.single_image_url} alt="" className="w-full h-full object-contain" />
+          <img src={settings.single_image_url} alt="" className={`w-full h-full ${fitClass}`} />
         </div>
       </div>
     );
@@ -357,10 +410,11 @@ const DisplayPanel = () => {
 
         {settings.ticker_enabled && tickerDisplayText.length > 3 && (
           <div
-            className="absolute bottom-0 left-0 right-0 z-50 flex items-center overflow-hidden"
+            className="absolute left-0 right-0 z-50 flex items-center overflow-hidden"
             style={{
               backgroundColor: "hsla(0, 0%, 0%, 0.75)",
               height: `${tickerHeight}px`,
+              bottom: `${settings.ticker_offset_y || 0}px`,
             }}
           >
             <div

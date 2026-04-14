@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Save, Sparkles, Timer } from "lucide-react";
 import {
@@ -15,7 +15,7 @@ export default function TransitionsSettings() {
   const [transitionDuration, setTransitionDuration] = useState(0.5);
   const [saving, setSaving] = useState(false);
 
-  const fetch = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     const { data } = await supabase.from("settings").select("id, transition_type, transition_duration").limit(1);
     if (data?.[0]) {
       setId(data[0].id);
@@ -24,7 +24,7 @@ export default function TransitionsSettings() {
     }
   }, []);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const save = async () => {
     setSaving(true);
@@ -52,20 +52,12 @@ export default function TransitionsSettings() {
           </Select>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Timer className="w-4 h-4 text-muted-foreground" />
-              <Label className="text-sm">מהירות מעבר</Label>
-            </div>
-            <span className="text-sm font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">{transitionDuration}s</span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Timer className="w-4 h-4 text-muted-foreground" />
+            <Label className="text-sm">מהירות מעבר (שניות)</Label>
           </div>
-          <Slider
-            min={1} max={20} step={1}
-            value={[transitionDuration * 10]}
-            onValueChange={([v]) => setTransitionDuration(v / 10)}
-            className="py-2"
-          />
+          <Input type="number" inputMode="decimal" step="0.1" min={0.1} max={2.0} value={transitionDuration} onChange={(e) => setTransitionDuration(Number(e.target.value) || 0.5)} className="h-12 text-base" />
           <p className="text-xs text-muted-foreground">0.1 – 2.0 שניות. חל רק על סגנון "עמעום".</p>
         </div>
       </div>
