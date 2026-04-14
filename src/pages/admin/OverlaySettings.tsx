@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Save, Image, Upload } from "lucide-react";
 import {
@@ -14,20 +14,25 @@ export default function OverlaySettings() {
   const [overlayUrl, setOverlayUrl] = useState("");
   const [overlayPosition, setOverlayPosition] = useState("top-right");
   const [overlaySize, setOverlaySize] = useState(50);
+  const [overlayOffsetX, setOverlayOffsetX] = useState(0);
+  const [overlayOffsetY, setOverlayOffsetY] = useState(0);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const fetch = useCallback(async () => {
-    const { data } = await supabase.from("settings").select("id, overlay_url, overlay_position, overlay_size").limit(1);
+  const fetchData = useCallback(async () => {
+    const { data } = await supabase.from("settings").select("id, overlay_url, overlay_position, overlay_size, overlay_offset_x, overlay_offset_y").limit(1);
     if (data?.[0]) {
-      setId(data[0].id);
-      setOverlayUrl(data[0].overlay_url);
-      setOverlayPosition(data[0].overlay_position);
-      setOverlaySize(data[0].overlay_size);
+      const r = data[0] as any;
+      setId(r.id);
+      setOverlayUrl(r.overlay_url);
+      setOverlayPosition(r.overlay_position);
+      setOverlaySize(r.overlay_size);
+      setOverlayOffsetX(r.overlay_offset_x ?? 0);
+      setOverlayOffsetY(r.overlay_offset_y ?? 0);
     }
   }, []);
 
-  useEffect(() => { fetch(); }, [fetch]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -49,7 +54,9 @@ export default function OverlaySettings() {
       overlay_url: overlayUrl,
       overlay_position: overlayPosition,
       overlay_size: overlaySize,
-    }).eq("id", id);
+      overlay_offset_x: overlayOffsetX,
+      overlay_offset_y: overlayOffsetY,
+    } as any).eq("id", id);
     setSaving(false);
     toast.success("הגדרות שכבה גרפית נשמרו");
   };
@@ -76,14 +83,12 @@ export default function OverlaySettings() {
           <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
             <img src={overlayUrl} alt="overlay" className="w-14 h-14 object-contain rounded-lg" />
             <span className="text-xs text-muted-foreground flex-1">תמונה נטענה</span>
-            <Button variant="ghost" size="sm" onClick={() => setOverlayUrl("")} className="text-xs text-destructive">
-              הסר
-            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setOverlayUrl("")} className="text-xs text-destructive">הסר</Button>
           </div>
         )}
 
         <div className="space-y-2">
-          <Label className="text-sm">מיקום</Label>
+          <Label className="text-sm">מיקום בסיסי</Label>
           <Select value={overlayPosition} onValueChange={setOverlayPosition}>
             <SelectTrigger className="h-12 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -95,12 +100,19 @@ export default function OverlaySettings() {
           </Select>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Label className="text-sm">גודל תמונה</Label>
-            <span className="text-sm font-mono text-muted-foreground bg-muted px-2 py-0.5 rounded">{overlaySize}px</span>
-          </div>
-          <Slider min={5} max={100} step={1} value={[overlaySize]} onValueChange={([v]) => setOverlaySize(v)} className="py-2" />
+        <div className="space-y-2">
+          <Label className="text-sm">גודל תמונה (px)</Label>
+          <Input type="number" inputMode="numeric" min={5} max={500} step={1} value={overlaySize} onChange={(e) => setOverlaySize(Number(e.target.value) || 50)} className="h-12 text-base" />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm">הזזה אופקית (פיקסלים)</Label>
+          <Input type="number" inputMode="numeric" value={overlayOffsetX} onChange={(e) => setOverlayOffsetX(Number(e.target.value))} className="h-12 text-base" />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm">הזזה אנכית (פיקסלים)</Label>
+          <Input type="number" inputMode="numeric" value={overlayOffsetY} onChange={(e) => setOverlayOffsetY(Number(e.target.value))} className="h-12 text-base" />
         </div>
       </div>
 
