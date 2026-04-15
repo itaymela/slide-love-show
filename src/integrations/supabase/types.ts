@@ -40,38 +40,42 @@ export type Database = {
       }
       macros: {
         Row: {
+          action_target_id: string | null
+          action_type: string
+          condition_type: string
+          condition_value: string
           created_at: string
           id: string
-          is_enabled: boolean
-          target_playlist_id: string
-          trigger_date: string | null
-          trigger_time: string
+          is_active: boolean
+          last_run_at: string | null
+          name: string
+          recurrence_interval_minutes: number | null
         }
         Insert: {
+          action_target_id?: string | null
+          action_type?: string
+          condition_type?: string
+          condition_value?: string
           created_at?: string
           id?: string
-          is_enabled?: boolean
-          target_playlist_id: string
-          trigger_date?: string | null
-          trigger_time?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          name?: string
+          recurrence_interval_minutes?: number | null
         }
         Update: {
+          action_target_id?: string | null
+          action_type?: string
+          condition_type?: string
+          condition_value?: string
           created_at?: string
           id?: string
-          is_enabled?: boolean
-          target_playlist_id?: string
-          trigger_date?: string | null
-          trigger_time?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          name?: string
+          recurrence_interval_minutes?: number | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "macros_target_playlist_id_fkey"
-            columns: ["target_playlist_id"]
-            isOneToOne: false
-            referencedRelation: "playlists"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       playlists: {
         Row: {
@@ -79,18 +83,21 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          play_mode: string
         }
         Insert: {
           created_at?: string
           id?: string
           is_active?: boolean
           name?: string
+          play_mode?: string
         }
         Update: {
           created_at?: string
           id?: string
           is_active?: boolean
           name?: string
+          play_mode?: string
         }
         Relationships: []
       }
@@ -98,11 +105,13 @@ export type Database = {
         Row: {
           birthday_enabled: boolean
           birthday_sheet_url: string
+          default_fallback_playlist_id: string | null
           display_offset_x: number
           display_offset_y: number
           display_scale: number
           global_object_fit: string
           id: string
+          interrupted_playlist_id: string | null
           manual_override: boolean
           overlay_offset_x: number
           overlay_offset_y: number
@@ -123,11 +132,13 @@ export type Database = {
         Insert: {
           birthday_enabled?: boolean
           birthday_sheet_url?: string
+          default_fallback_playlist_id?: string | null
           display_offset_x?: number
           display_offset_y?: number
           display_scale?: number
           global_object_fit?: string
           id?: string
+          interrupted_playlist_id?: string | null
           manual_override?: boolean
           overlay_offset_x?: number
           overlay_offset_y?: number
@@ -148,11 +159,13 @@ export type Database = {
         Update: {
           birthday_enabled?: boolean
           birthday_sheet_url?: string
+          default_fallback_playlist_id?: string | null
           display_offset_x?: number
           display_offset_y?: number
           display_scale?: number
           global_object_fit?: string
           id?: string
+          interrupted_playlist_id?: string | null
           manual_override?: boolean
           overlay_offset_x?: number
           overlay_offset_y?: number
