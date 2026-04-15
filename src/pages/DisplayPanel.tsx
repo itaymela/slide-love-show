@@ -318,18 +318,19 @@ const DisplayPanel = () => {
 
   const renderMedia = (slide: Slide | null, videoRef: React.MutableRefObject<HTMLVideoElement | null>) => {
     if (!slide) return null;
+    const slideFit = getSlideFitClass(slide);
     if (slide.media_type === "video") {
       return (
         <video
           ref={videoRef}
           src={slide.image_url}
-          className={`w-full h-full ${fitClass}`}
+          className={`w-full h-full ${slideFit}`}
           muted playsInline loop={slides.length === 1}
           onCanPlayThrough={onNextReady}
         />
       );
     }
-    return <img src={slide.image_url} alt="" className={`w-full h-full ${fitClass}`} onLoad={onNextReady} onError={onNextReady} />;
+    return <img src={slide.image_url} alt="" className={`w-full h-full ${slideFit}`} onLoad={onNextReady} onError={onNextReady} />;
   };
 
   const customTickerPart = settings.ticker_text
