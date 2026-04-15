@@ -19,7 +19,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 
-type Playlist = { id: string; name: string; is_active: boolean; created_at: string };
+type Playlist = { id: string; name: string; is_active: boolean; created_at: string; play_mode: string };
 type Slide = { id: string; image_url: string; duration: number; sort_order: number; object_fit: string; playlist_id: string; media_type: string };
 
 const VIDEO_EXTENSIONS = ["mp4", "webm", "ogg", "mov"];
