@@ -171,9 +171,7 @@ const DisplayPanel = () => {
     fetchBirthdays();
     birthdayIntervalRef.current = setInterval(fetchBirthdays, 3600000);
     return () => { if (birthdayIntervalRef.current) clearInterval(birthdayIntervalRef.current); };
-  }, [fetchBirthdays]);
-
-  useEffect(() => { fetchBirthdays(); }, [settings.birthday_enabled, settings.birthday_sheet_url, fetchBirthdays]);
+  }, [settings.birthday_enabled, settings.birthday_sheet_url, fetchBirthdays]);
 
   useEffect(() => {
     const channel = supabase
@@ -299,6 +297,12 @@ const DisplayPanel = () => {
     return () => clearTimer();
   }, [slides, scheduleAdvance]);
 
+  const getSlideFitClass = (slide: Slide | null) => {
+    const fit = (slide?.object_fit && slide.object_fit !== "contain" && slide.object_fit !== "cover")
+      ? settings.global_object_fit
+      : (slide?.object_fit || settings.global_object_fit);
+    return fit === "cover" ? "object-cover" : "object-contain";
+  };
   const fitClass = settings.global_object_fit === "cover" ? "object-cover" : "object-contain";
   const isFade = settings.transition_type === "fade";
   const transitionDur = isFade ? `${settings.transition_duration}s` : "0s";
@@ -314,18 +318,19 @@ const DisplayPanel = () => {
 
   const renderMedia = (slide: Slide | null, videoRef: React.MutableRefObject<HTMLVideoElement | null>) => {
     if (!slide) return null;
+    const slideFit = getSlideFitClass(slide);
     if (slide.media_type === "video") {
       return (
         <video
           ref={videoRef}
           src={slide.image_url}
-          className={`w-full h-full ${fitClass}`}
+          className={`w-full h-full ${slideFit}`}
           muted playsInline loop={slides.length === 1}
           onCanPlayThrough={onNextReady}
         />
       );
     }
-    return <img src={slide.image_url} alt="" className={`w-full h-full ${fitClass}`} onLoad={onNextReady} />;
+    return <img src={slide.image_url} alt="" className={`w-full h-full ${slideFit}`} onLoad={onNextReady} onError={onNextReady} />;
   };
 
   const customTickerPart = settings.ticker_text

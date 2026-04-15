@@ -72,9 +72,6 @@ export default function PlaylistsTab() {
       return;
     }
 
-    // Check which image_urls are used by other playlists before deleting slides
-    const { data: slidesToDelete } = await supabase.from("slides").select("image_url").eq("playlist_id", playlistToDelete);
-    
     // Delete slides records only (files stay in storage for shared references)
     await supabase.from("slides").delete().eq("playlist_id", playlistToDelete);
     await supabase.from("playlists").delete().eq("id", playlistToDelete);
