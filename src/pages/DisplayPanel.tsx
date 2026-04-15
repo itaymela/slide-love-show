@@ -54,27 +54,19 @@ const LoadingScreen = () => (
   </div>
 );
 
-function preloadMedia(slides: Slide[]): Promise<void> {
-  if (slides.length === 0) return Promise.resolve();
+/** Preload only images; videos use the A/B layer refs directly */
+function preloadImages(slides: Slide[]): Promise<void> {
+  const imageSlides = slides.filter(s => s.media_type !== "video");
+  if (imageSlides.length === 0) return Promise.resolve();
   return new Promise((resolve) => {
     let loaded = 0;
-    const total = slides.length;
-    const done = () => { loaded++; if (loaded >= total) resolve(); };
-    slides.forEach((slide) => {
-      if (slide.media_type === "video") {
-        const v = document.createElement("video");
-        v.preload = "auto";
-        v.oncanplaythrough = done;
-        v.onerror = done;
-        v.src = slide.image_url;
-      } else {
-        const img = new window.Image();
-        img.onload = done;
-        img.onerror = done;
-        img.src = slide.image_url;
-      }
+    const done = () => { loaded++; if (loaded >= imageSlides.length) resolve(); };
+    imageSlides.forEach((slide) => {
+      const img = new window.Image();
+      img.onload = done;
+      img.onerror = done;
+      img.src = slide.image_url;
     });
-    // Safety timeout
     setTimeout(resolve, 15000);
   });
 }
@@ -96,7 +88,7 @@ const DisplayPanel = () => {
   const nextReadyRef = useRef(false);
   const videoARef = useRef<HTMLVideoElement | null>(null);
   const videoBRef = useRef<HTMLVideoElement | null>(null);
-  const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const presenceChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const settingsRef = useRef(settings);
 
   const clearTimer = () => {
@@ -141,7 +133,7 @@ const DisplayPanel = () => {
     const { data } = await supabase.from("slides").select("*").eq("playlist_id", activeId).order("sort_order", { ascending: true });
     if (data && data.length > 0) {
       setLoading(true);
-      await preloadMedia(data);
+      await preloadImages(data);
       slidesRef.current = data;
       setSlides(data);
       setLoading(false);
@@ -193,24 +185,36 @@ const DisplayPanel = () => {
     return () => { supabase.removeChannel(channel); };
   }, [fetchActiveSlides, fetchSettings]);
 
+  // --- Heartbeat via Realtime Presence (no DB writes) ---
   useEffect(() => {
-    const sendHeartbeat = async () => {
+    const channel = supabase.channel("display-presence", {
+      config: { presence: { key: "display-kiosk" } },
+    });
+
+    const trackPresence = () => {
       const s = slidesRef.current;
       const idx = currentIndexRef.current;
-      const currentUrl = s[idx]?.image_url || "";
-      const { data: rows } = await supabase.from("display_heartbeat").select("id").limit(1);
-      if (rows?.[0]) {
-        await supabase.from("display_heartbeat").update({
-          last_seen: new Date().toISOString(),
-          current_slide_url: currentUrl,
-          current_slide_index: idx,
-          updated_at: new Date().toISOString(),
-        }).eq("id", rows[0].id);
-      }
+      channel.track({
+        current_slide_url: s[idx]?.image_url || "",
+        current_slide_index: idx,
+        last_seen: new Date().toISOString(),
+      });
     };
-    sendHeartbeat();
-    heartbeatRef.current = setInterval(sendHeartbeat, 10000);
-    return () => { if (heartbeatRef.current) clearInterval(heartbeatRef.current); };
+
+    channel.on("presence", { event: "sync" }, () => {}).subscribe((status) => {
+      if (status === "SUBSCRIBED") {
+        trackPresence();
+      }
+    });
+
+    presenceChannelRef.current = channel;
+    const interval = setInterval(trackPresence, 30000); // every 30s instead of 10s
+
+    return () => {
+      clearInterval(interval);
+      supabase.removeChannel(channel);
+      presenceChannelRef.current = null;
+    };
   }, [slides]);
 
   useEffect(() => {
@@ -299,6 +303,15 @@ const DisplayPanel = () => {
   const isFade = settings.transition_type === "fade";
   const transitionDur = isFade ? `${settings.transition_duration}s` : "0s";
 
+  // GPU-accelerated layer styles
+  const layerStyle = (isActive: boolean): React.CSSProperties => ({
+    opacity: isActive ? 1 : 0,
+    zIndex: isActive ? 2 : 1,
+    transition: `opacity ${transitionDur} ease-in-out`,
+    willChange: "opacity",
+    transform: "translateZ(0)",
+  });
+
   const renderMedia = (slide: Slide | null, videoRef: React.MutableRefObject<HTMLVideoElement | null>) => {
     if (!slide) return null;
     if (slide.media_type === "video") {
@@ -335,7 +348,6 @@ const DisplayPanel = () => {
   const offsetY = settings.display_offset_y || 0;
   const calibrationTransform = `scale(${scaleFactor}) translate(${offsetX}px, ${offsetY}px)`;
 
-  // Overlay position styles with custom offsets
   const oX = settings.overlay_offset_x || 0;
   const oY = settings.overlay_offset_y || 0;
   const overlayPositionStyles: Record<string, React.CSSProperties> = {
@@ -345,10 +357,8 @@ const DisplayPanel = () => {
     "bottom-left": { bottom: (settings.ticker_enabled ? tickerHeight + 12 : 12) - oY, left: 12 + oX },
   };
 
-  // Loading state
   if (loading) return <LoadingScreen />;
 
-  // Single image mode
   if (settings.single_image_active && settings.single_image_url) {
     return (
       <div className="fixed inset-0 overflow-hidden" style={{ backgroundColor: "hsl(0 0% 0%)", cursor: "none" }}>
@@ -372,27 +382,18 @@ const DisplayPanel = () => {
         <div className="relative w-full" style={{ height: settings.ticker_enabled && tickerDisplayText.length > 3 ? `calc(100% - ${tickerHeight}px)` : "100%" }}>
           <div
             className="absolute inset-0 w-full h-full"
-            style={{
-              opacity: activeLayer === "A" ? 1 : 0,
-              zIndex: activeLayer === "A" ? 2 : 1,
-              transition: `opacity ${transitionDur} ease-in-out`,
-            }}
+            style={layerStyle(activeLayer === "A")}
           >
             {renderMedia(slideA, videoARef)}
           </div>
           <div
             className="absolute inset-0 w-full h-full"
-            style={{
-              opacity: activeLayer === "B" ? 1 : 0,
-              zIndex: activeLayer === "B" ? 2 : 1,
-              transition: `opacity ${transitionDur} ease-in-out`,
-            }}
+            style={layerStyle(activeLayer === "B")}
           >
             {renderMedia(slideB, videoBRef)}
           </div>
         </div>
 
-        {/* Graphic Overlay */}
         {settings.overlay_url && (
           <img
             src={settings.overlay_url}
