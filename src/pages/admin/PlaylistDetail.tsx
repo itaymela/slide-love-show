@@ -7,8 +7,11 @@ import { toast } from "sonner";
 import {
   Upload, ArrowUp, ArrowDown, Trash2, Save,
   Image as ImageIcon, Check, Film, Pencil, Copy,
-  MoreVertical, ArrowRightLeft,
+  MoreVertical, ArrowRightLeft, Repeat, Play,
 } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
@@ -196,6 +199,27 @@ export default function PlaylistDetail() {
         </div>
 
         <div className="flex flex-col gap-3">
+          {/* Play Mode */}
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground">מצב הפעלה</Label>
+            <Select
+              value={playlist.play_mode || "loop"}
+              onValueChange={async (val) => {
+                await supabase.from("playlists").update({ play_mode: val } as any).eq("id", id);
+                setPlaylist(prev => prev ? { ...prev, play_mode: val } : prev);
+                toast.success(val === "loop" ? "מצב: לופ" : "מצב: הפעלה חד-פעמית");
+              }}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="loop"><span className="flex items-center gap-2"><Repeat className="w-4 h-4" /> לופ (חזרה)</span></SelectItem>
+                <SelectItem value="play_once"><span className="flex items-center gap-2"><Play className="w-4 h-4" /> הפעל פעם אחת</span></SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button variant={playlist.is_active ? "secondary" : "default"} disabled={playlist.is_active} onClick={setActive} className="w-full h-12 text-base gap-2">
             <Check className="w-5 h-5" />
             {playlist.is_active ? "פלייליסט פעיל" : "הפעל פלייליסט זה"}
