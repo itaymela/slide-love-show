@@ -211,7 +211,7 @@ export default function AutomationTab() {
         <Select value={fallbackId} onValueChange={updateFallback}>
           <SelectTrigger className="h-10 text-sm w-full"><SelectValue placeholder="ללא" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">ללא</SelectItem>
+            <SelectItem value="none">ללא</SelectItem>
             {playlists.map(p => (
               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
