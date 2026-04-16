@@ -55,7 +55,7 @@ export default function AutomationTab() {
   const [macros, setMacros] = useState<Macro[]>([]);
   const [playlists, setPlaylists] = useState<Playlist[]>([]);
   const [manualOverride, setManualOverride] = useState(false);
-  const [fallbackId, setFallbackId] = useState<string>("");
+  const [fallbackId, setFallbackId] = useState<string>("none");
 
   // Wizard state
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -74,7 +74,7 @@ export default function AutomationTab() {
     if (p) setPlaylists(p as unknown as Playlist[]);
     if (s?.[0]) {
       setManualOverride((s[0] as any).manual_override);
-      setFallbackId((s[0] as any).default_fallback_playlist_id || "");
+      setFallbackId((s[0] as any).default_fallback_playlist_id || "none");
     }
   }, []);
 
@@ -93,7 +93,7 @@ export default function AutomationTab() {
     setFallbackId(val);
     const { data: rows } = await supabase.from("settings").select("id").limit(1);
     if (rows?.[0]) {
-      await supabase.from("settings").update({ default_fallback_playlist_id: val || null } as any).eq("id", rows[0].id);
+      await supabase.from("settings").update({ default_fallback_playlist_id: val === "none" ? null : val } as any).eq("id", rows[0].id);
     }
     toast.success("פלייליסט ברירת מחדל עודכן");
   };
@@ -211,7 +211,7 @@ export default function AutomationTab() {
         <Select value={fallbackId} onValueChange={updateFallback}>
           <SelectTrigger className="h-10 text-sm w-full"><SelectValue placeholder="ללא" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">ללא</SelectItem>
+            <SelectItem value="none">ללא</SelectItem>
             {playlists.map(p => (
               <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
             ))}
