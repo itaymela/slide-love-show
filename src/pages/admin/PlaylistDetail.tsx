@@ -267,19 +267,26 @@ export default function PlaylistDetail() {
                 </div>
 
                 <div className="flex-1 flex flex-col justify-between min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="number"
-                      inputMode="decimal"
-                      step="0.1"
-                      min={0.1}
-                      max={300}
-                      value={slide.duration}
-                      onChange={(e) => updateDuration(index, parseFloat(e.target.value) || 5)}
-                      className="h-9 w-20 text-center text-sm font-semibold"
-                    />
-                    <span className="text-xs text-muted-foreground">שניות</span>
-                  </div>
+                  {slide.media_type !== "video" ? (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        inputMode="decimal"
+                        step="0.1"
+                        min={0.1}
+                        max={300}
+                        value={slide.duration}
+                        onChange={(e) => updateDuration(index, parseFloat(e.target.value) || 5)}
+                        className="h-9 w-20 text-center text-sm font-semibold"
+                      />
+                      <span className="text-xs text-muted-foreground">שניות</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Film className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">{slide.duration} שניות (אורך הסרטון)</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveSlide(index, "up")} disabled={index === 0}><ArrowUp className="w-4 h-4" /></Button>
                     <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveSlide(index, "down")} disabled={index === slides.length - 1}><ArrowDown className="w-4 h-4" /></Button>
