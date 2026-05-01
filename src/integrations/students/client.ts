@@ -4,7 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 
 const STUDENTS_SUPABASE_URL = "https://izhbghjfrlgdpqrhnful.supabase.co";
 const STUDENTS_SUPABASE_ANON_KEY =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6aGJnaGpmcmxnZHBxcmhuZnVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0Mjc5NzgsImV4cCI6MjA5MjAwMzk3OH0.4PJyOxXKhW5LyRtqOJT6JIPoUBVkAvHA_eZRo5kVVer";
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml6aGJnaGpmcmxnZHBxcmhuZnVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY0Mjc5NzgsImV4cCI6MjA5MjAwMzk3OH0.4PJyOxXKhW5LyRtqOJT6JIPoUBVkAvH_eZRo5kVVerA";
 
 export type Student = {
   full_name: string;
