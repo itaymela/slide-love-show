@@ -112,6 +112,11 @@ const DisplayPanel = () => {
         overlay_size: raw.overlay_size ?? 50, overlay_offset_x: raw.overlay_offset_x ?? 0,
         overlay_offset_y: raw.overlay_offset_y ?? 0, single_image_url: raw.single_image_url || "",
         single_image_active: raw.single_image_active ?? false, global_object_fit: raw.global_object_fit || "contain",
+        sky_mode_enabled: raw.sky_mode_enabled ?? false,
+        sky_mode_interval_minutes: raw.sky_mode_interval_minutes ?? 30,
+        sky_mode_duration_seconds: raw.sky_mode_duration_seconds ?? 20,
+        sky_mode_names_per_screen: raw.sky_mode_names_per_screen ?? 8,
+        sky_mode_manual_trigger: raw.sky_mode_manual_trigger ?? 0,
       };
       setSettings(s);
       settingsRef.current = s;
