@@ -81,6 +81,13 @@ const DisplayPanel = () => {
   const [activePlayMode, setActivePlayMode] = useState<string>("loop");
   const birthdayIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // --- Sky Mode state ---
+  const [skyActive, setSkyActive] = useState(false);
+  const [skySession, setSkySession] = useState(0);
+  const skyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skyIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastManualTriggerRef = useRef<number>(0);
+
   const slidesRef = useRef<Slide[]>([]);
   const currentIndexRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -158,6 +165,58 @@ const DisplayPanel = () => {
   }, []);
 
   useEffect(() => { fetchActiveSlides(); fetchSettings(); }, [fetchActiveSlides, fetchSettings]);
+
+  // --- Sky Mode driver: scheduled interval + manual trigger reaction ---
+  const startSkySession = useCallback(() => {
+    if (skyTimerRef.current) clearTimeout(skyTimerRef.current);
+    setSkySession((k) => k + 1);
+    setSkyActive(true);
+    const durationMs = Math.max(3, settingsRef.current.sky_mode_duration_seconds || 20) * 1000;
+    skyTimerRef.current = setTimeout(() => {
+      setSkyActive(false);
+    }, durationMs);
+  }, []);
+
+  // Schedule periodic Sky Mode based on interval_minutes
+  useEffect(() => {
+    if (skyIntervalRef.current) {
+      clearInterval(skyIntervalRef.current);
+      skyIntervalRef.current = null;
+    }
+    if (!settings.sky_mode_enabled) {
+      setSkyActive(false);
+      if (skyTimerRef.current) { clearTimeout(skyTimerRef.current); skyTimerRef.current = null; }
+      return;
+    }
+    const minutes = Math.max(1, settings.sky_mode_interval_minutes || 30);
+    skyIntervalRef.current = setInterval(() => {
+      startSkySession();
+    }, minutes * 60 * 1000);
+    return () => {
+      if (skyIntervalRef.current) clearInterval(skyIntervalRef.current);
+    };
+  }, [settings.sky_mode_enabled, settings.sky_mode_interval_minutes, startSkySession]);
+
+  // React to manual trigger increments (works even when sky_mode_enabled=false)
+  useEffect(() => {
+    const cur = settings.sky_mode_manual_trigger || 0;
+    if (lastManualTriggerRef.current === 0) {
+      // initial sync — don't fire on first load
+      lastManualTriggerRef.current = cur;
+      return;
+    }
+    if (cur !== lastManualTriggerRef.current) {
+      lastManualTriggerRef.current = cur;
+      startSkySession();
+    }
+  }, [settings.sky_mode_manual_trigger, startSkySession]);
+
+  useEffect(() => {
+    return () => {
+      if (skyTimerRef.current) clearTimeout(skyTimerRef.current);
+      if (skyIntervalRef.current) clearInterval(skyIntervalRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     fetchBirthdays();
