@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import SkyMode from "@/components/display/SkyMode";
 
 type Slide = {
   id: string; image_url: string; duration: number; sort_order: number;
@@ -15,6 +16,11 @@ type DisplaySettings = {
   birthday_sheet_url: string; birthday_enabled: boolean;
   single_image_url: string; single_image_active: boolean;
   global_object_fit: string;
+  sky_mode_enabled: boolean;
+  sky_mode_interval_minutes: number;
+  sky_mode_duration_seconds: number;
+  sky_mode_names_per_screen: number;
+  sky_mode_manual_trigger: number;
 };
 
 type Macro = {
@@ -34,6 +40,9 @@ const defaultSettings: DisplaySettings = {
   birthday_sheet_url: "", birthday_enabled: false,
   single_image_url: "", single_image_active: false,
   global_object_fit: "contain",
+  sky_mode_enabled: false, sky_mode_interval_minutes: 30,
+  sky_mode_duration_seconds: 20, sky_mode_names_per_screen: 8,
+  sky_mode_manual_trigger: 0,
 };
 
 const LoadingScreen = () => (
@@ -72,6 +81,13 @@ const DisplayPanel = () => {
   const [activePlayMode, setActivePlayMode] = useState<string>("loop");
   const birthdayIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // --- Sky Mode state ---
+  const [skyActive, setSkyActive] = useState(false);
+  const [skySession, setSkySession] = useState(0);
+  const skyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const skyIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastManualTriggerRef = useRef<number>(0);
+
   const slidesRef = useRef<Slide[]>([]);
   const currentIndexRef = useRef(0);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -103,6 +119,11 @@ const DisplayPanel = () => {
         overlay_size: raw.overlay_size ?? 50, overlay_offset_x: raw.overlay_offset_x ?? 0,
         overlay_offset_y: raw.overlay_offset_y ?? 0, single_image_url: raw.single_image_url || "",
         single_image_active: raw.single_image_active ?? false, global_object_fit: raw.global_object_fit || "contain",
+        sky_mode_enabled: raw.sky_mode_enabled ?? false,
+        sky_mode_interval_minutes: raw.sky_mode_interval_minutes ?? 30,
+        sky_mode_duration_seconds: raw.sky_mode_duration_seconds ?? 20,
+        sky_mode_names_per_screen: raw.sky_mode_names_per_screen ?? 8,
+        sky_mode_manual_trigger: raw.sky_mode_manual_trigger ?? 0,
       };
       setSettings(s);
       settingsRef.current = s;
@@ -144,6 +165,58 @@ const DisplayPanel = () => {
   }, []);
 
   useEffect(() => { fetchActiveSlides(); fetchSettings(); }, [fetchActiveSlides, fetchSettings]);
+
+  // --- Sky Mode driver: scheduled interval + manual trigger reaction ---
+  const startSkySession = useCallback(() => {
+    if (skyTimerRef.current) clearTimeout(skyTimerRef.current);
+    setSkySession((k) => k + 1);
+    setSkyActive(true);
+    const durationMs = Math.max(3, settingsRef.current.sky_mode_duration_seconds || 20) * 1000;
+    skyTimerRef.current = setTimeout(() => {
+      setSkyActive(false);
+    }, durationMs);
+  }, []);
+
+  // Schedule periodic Sky Mode based on interval_minutes
+  useEffect(() => {
+    if (skyIntervalRef.current) {
+      clearInterval(skyIntervalRef.current);
+      skyIntervalRef.current = null;
+    }
+    if (!settings.sky_mode_enabled) {
+      setSkyActive(false);
+      if (skyTimerRef.current) { clearTimeout(skyTimerRef.current); skyTimerRef.current = null; }
+      return;
+    }
+    const minutes = Math.max(1, settings.sky_mode_interval_minutes || 30);
+    skyIntervalRef.current = setInterval(() => {
+      startSkySession();
+    }, minutes * 60 * 1000);
+    return () => {
+      if (skyIntervalRef.current) clearInterval(skyIntervalRef.current);
+    };
+  }, [settings.sky_mode_enabled, settings.sky_mode_interval_minutes, startSkySession]);
+
+  // React to manual trigger increments (works even when sky_mode_enabled=false)
+  useEffect(() => {
+    const cur = settings.sky_mode_manual_trigger || 0;
+    if (lastManualTriggerRef.current === 0) {
+      // initial sync — don't fire on first load
+      lastManualTriggerRef.current = cur;
+      return;
+    }
+    if (cur !== lastManualTriggerRef.current) {
+      lastManualTriggerRef.current = cur;
+      startSkySession();
+    }
+  }, [settings.sky_mode_manual_trigger, startSkySession]);
+
+  useEffect(() => {
+    return () => {
+      if (skyTimerRef.current) clearTimeout(skyTimerRef.current);
+      if (skyIntervalRef.current) clearInterval(skyIntervalRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     fetchBirthdays();
@@ -416,6 +489,7 @@ const DisplayPanel = () => {
         <div style={{ width: "100%", height: "100%", transform: calibrationTransform, transformOrigin: "center center" }}>
           <img src={settings.single_image_url} alt="" className={`w-full h-full ${fitClass}`} />
         </div>
+        <SkyMode active={skyActive} namesPerScreen={settings.sky_mode_names_per_screen} sessionKey={skySession} />
       </div>
     );
   }
@@ -442,6 +516,7 @@ const DisplayPanel = () => {
         )}
       </div>
       <style>{`@keyframes ticker-rtl { 0% { transform: translateX(-100%); } 100% { transform: translateX(100vw); } }`}</style>
+      <SkyMode active={skyActive} namesPerScreen={settings.sky_mode_names_per_screen} sessionKey={skySession} />
     </div>
   );
 };

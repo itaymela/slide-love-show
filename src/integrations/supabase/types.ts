@@ -120,6 +120,11 @@ export type Database = {
           overlay_url: string
           single_image_active: boolean
           single_image_url: string
+          sky_mode_duration_seconds: number
+          sky_mode_enabled: boolean
+          sky_mode_interval_minutes: number
+          sky_mode_manual_trigger: number
+          sky_mode_names_per_screen: number
           ticker_enabled: boolean
           ticker_font_size: number
           ticker_offset_y: number
@@ -147,6 +152,11 @@ export type Database = {
           overlay_url?: string
           single_image_active?: boolean
           single_image_url?: string
+          sky_mode_duration_seconds?: number
+          sky_mode_enabled?: boolean
+          sky_mode_interval_minutes?: number
+          sky_mode_manual_trigger?: number
+          sky_mode_names_per_screen?: number
           ticker_enabled?: boolean
           ticker_font_size?: number
           ticker_offset_y?: number
@@ -174,6 +184,11 @@ export type Database = {
           overlay_url?: string
           single_image_active?: boolean
           single_image_url?: string
+          sky_mode_duration_seconds?: number
+          sky_mode_enabled?: boolean
+          sky_mode_interval_minutes?: number
+          sky_mode_manual_trigger?: number
+          sky_mode_names_per_screen?: number
           ticker_enabled?: boolean
           ticker_font_size?: number
           ticker_offset_y?: number

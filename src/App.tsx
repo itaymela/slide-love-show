@@ -17,6 +17,7 @@ import OverlaySettings from "./pages/admin/OverlaySettings";
 import CalibrationSettings from "./pages/admin/CalibrationSettings";
 import SingleImageSettings from "./pages/admin/SingleImageSettings";
 import PlaylistDetail from "./pages/admin/PlaylistDetail";
+import SkyModeSettings from "./pages/admin/SkyModeSettings";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
             <Route path="settings/overlay" element={<OverlaySettings />} />
             <Route path="settings/calibration" element={<CalibrationSettings />} />
             <Route path="settings/single-image" element={<SingleImageSettings />} />
+            <Route path="settings/sky-mode" element={<SkyModeSettings />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
