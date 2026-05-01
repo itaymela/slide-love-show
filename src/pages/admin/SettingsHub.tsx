@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Sparkles, Type, Image, Monitor, Cake, ImageIcon } from "lucide-react";
+import { Sparkles, Type, Image, Monitor, Cake, ImageIcon, Cloud } from "lucide-react";
 
 const settingsCards = [
   {
@@ -7,6 +7,12 @@ const settingsCards = [
     label: "תמונה בודדת",
     description: "הצגת תמונה קבועה על כל המסך במקום פלייליסט",
     path: "/admin/settings/single-image",
+  },
+  {
+    icon: Cloud,
+    label: "מצב שמיים",
+    description: "בועות עם שמות תלמידים על רקע שמיים, אוטומטי או ידני",
+    path: "/admin/settings/sky-mode",
   },
   {
     icon: Sparkles,
