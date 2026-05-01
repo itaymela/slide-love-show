@@ -489,6 +489,7 @@ const DisplayPanel = () => {
         <div style={{ width: "100%", height: "100%", transform: calibrationTransform, transformOrigin: "center center" }}>
           <img src={settings.single_image_url} alt="" className={`w-full h-full ${fitClass}`} />
         </div>
+        <SkyMode active={skyActive} namesPerScreen={settings.sky_mode_names_per_screen} sessionKey={skySession} />
       </div>
     );
   }
@@ -515,6 +516,7 @@ const DisplayPanel = () => {
         )}
       </div>
       <style>{`@keyframes ticker-rtl { 0% { transform: translateX(-100%); } 100% { transform: translateX(100vw); } }`}</style>
+      <SkyMode active={skyActive} namesPerScreen={settings.sky_mode_names_per_screen} sessionKey={skySession} />
     </div>
   );
 };
