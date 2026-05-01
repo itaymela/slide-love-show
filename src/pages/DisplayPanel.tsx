@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import SkyMode from "@/components/display/SkyMode";
 
 type Slide = {
   id: string; image_url: string; duration: number; sort_order: number;
@@ -15,6 +16,11 @@ type DisplaySettings = {
   birthday_sheet_url: string; birthday_enabled: boolean;
   single_image_url: string; single_image_active: boolean;
   global_object_fit: string;
+  sky_mode_enabled: boolean;
+  sky_mode_interval_minutes: number;
+  sky_mode_duration_seconds: number;
+  sky_mode_names_per_screen: number;
+  sky_mode_manual_trigger: number;
 };
 
 type Macro = {
@@ -34,6 +40,9 @@ const defaultSettings: DisplaySettings = {
   birthday_sheet_url: "", birthday_enabled: false,
   single_image_url: "", single_image_active: false,
   global_object_fit: "contain",
+  sky_mode_enabled: false, sky_mode_interval_minutes: 30,
+  sky_mode_duration_seconds: 20, sky_mode_names_per_screen: 8,
+  sky_mode_manual_trigger: 0,
 };
 
 const LoadingScreen = () => (
